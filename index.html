@@ -46,7 +46,7 @@
     `);
   }
 
-  // ✅ CSV Import (streaming)
+  // ✅ CSV Import
   function importCSV() {
     const fileInput = document.getElementById("csvFile");
     const statusBox = document.getElementById("statusBox");
@@ -62,9 +62,8 @@
     statusBox.innerHTML = "<p class='loading'>⏳ Loading...</p>";
 
     let headers = [];
-    let rows = [];
-    let dbName = file.name.replace(".csv", "");
     let rowCount = 0;
+    let dbName = file.name.replace(".csv", "");
 
     Papa.parse(file, {
       header: true,
@@ -78,7 +77,6 @@
             rows: []
           };
         }
-        // শুধু প্রথম 1000 row sample হিসেবে রাখব
         if (rowCount < 1000) {
           databases[dbName].rows.push(headers.map(h => row.data[h] || ""));
         }
@@ -97,7 +95,7 @@
     });
   }
 
-  // ✅ Google Sheet Import (streaming)
+  // ✅ Google Sheet Import (fixed)
   async function importGoogleSheet() {
     const url = document.getElementById("sheetUrl").value;
     const status = document.getElementById("sheetStatus");
@@ -106,12 +104,14 @@
     try {
       let csvUrl = url.includes("output=csv") ? url : url.replace("/edit", "/gviz/tq?tqx=out:csv");
       const response = await fetch("https://api.allorigins.win/raw?url=" + encodeURIComponent(csvUrl));
+      if (!response.ok) throw new Error("Network error");
       const csvText = await response.text();
 
       let headers = [];
       let rows = [];
-      let dbName = "GoogleSheetDB_" + Date.now();
       let rowCount = 0;
+      let dbName = "GoogleSheetDB_" + Date.now();
+      let validData = false;
 
       Papa.parse(csvText, {
         header: true,
@@ -119,21 +119,31 @@
         skipEmptyLines: true,
         step: function (row) {
           if (rowCount === 0) {
-            headers = Object.keys(row.data);
-            databases[dbName] = {
-              headers: headers.map(h => ({ name: h, type: "Text" })),
-              rows: []
-            };
+            headers = Object.keys(row.data).filter(h => h.trim() !== "");
+            if (headers.length > 0) {
+              databases[dbName] = {
+                headers: headers.map(h => ({ name: h, type: "Text" })),
+                rows: []
+              };
+              validData = true;
+            }
           }
-          if (rowCount < 1000) {
+          if (validData && rowCount < 1000) {
             databases[dbName].rows.push(headers.map(h => row.data[h] || ""));
           }
           rowCount++;
         },
         complete: function () {
+          if (!validData) {
+            status.innerHTML = "<p style='color:red'>❌ Failed to parse Google Sheet data!</p>";
+            return;
+          }
           saveDatabases();
           status.innerHTML = `<p class='success'>✅ Upload Done! (${rowCount} rows, showing sample)</p>`;
           openDatabases();
+        },
+        error: function () {
+          status.innerHTML = "<p style='color:red'>❌ Failed to parse Google Sheet data!</p>";
         }
       });
     } catch (err) {
@@ -142,7 +152,7 @@
     }
   }
 
-  // ✅ Open DB with pagination (sample only)
+  // ✅ Open DB
   function openDatabase(dbName, page = 1) {
     const db = databases[dbName];
     const rowsPerPage = 100;

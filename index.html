@@ -46,16 +46,8 @@
       border-radius: 4px;
       background: #f9f9f9;
     }
-    .db-menu {
-      cursor: pointer;
-      padding: 0 8px;
-    }
-    .db-left {
-      flex-grow: 1;
-      cursor: pointer;
-      padding-left: 8px;
-      text-align: left;
-    }
+    .db-menu { cursor: pointer; padding: 0 8px; }
+    .db-left { flex-grow: 1; cursor: pointer; padding-left: 8px; text-align: left; }
 
     /* Popup menu */
     #popupMenu {
@@ -67,16 +59,9 @@
       box-shadow: 0 2px 6px rgba(0,0,0,0.2);
       min-width: 120px;
     }
-    .menu-item {
-      padding: 8px 12px;
-      cursor: pointer;
-    }
-    .menu-item:hover {
-      background: #f0f0f0;
-    }
-    .menu-item:active {
-      background: #d0d0d0;
-    }
+    .menu-item { padding: 8px 12px; cursor: pointer; }
+    .menu-item:hover { background: #f0f0f0; }
+    .menu-item:active { background: #d0d0d0; }
   </style>
 </head>
 <body onload="goHome()">
@@ -146,7 +131,7 @@
       `);
     }
 
-    // ✅ CSV Import
+    // CSV Import
     function importCSV() {
       const fileInput = document.getElementById("csvFile");
       const statusBox = document.getElementById("statusBox");
@@ -195,23 +180,33 @@
       });
     }
 
-    // ✅ Google Sheet Import (Optimized for speed)
+    // Google Sheet Import (Improved)
     async function importGoogleSheet() {
       const url = document.getElementById("sheetUrl").value.trim();
       const status = document.getElementById("sheetStatus");
       status.textContent = "⌛ Loading from Google Sheet...";
 
       try {
-        let csvUrl = url.includes("output=csv") ? url : url.replace("/edit", "/gviz/tq?tqx=out:csv");
+        let csvUrl;
+        if (url.includes("output=csv")) {
+          csvUrl = url;
+        } else if (url.includes("/edit")) {
+          csvUrl = url.replace("/edit", "/gviz/tq?tqx=out:csv");
+        } else if (url.includes("/pub")) {
+          csvUrl = url.replace("/pub", "/pub?output=csv");
+        } else {
+          throw new Error("Invalid Google Sheet URL");
+        }
+
         const response = await fetch("https://api.allorigins.win/raw?url=" + encodeURIComponent(csvUrl));
         if (!response.ok) throw new Error("Network error");
         const csvText = await response.text();
 
         let headers = [];
         let rowCount = 0;
-        let parsedRows = [];
         let dbName = "GoogleSheetDB_" + Date.now();
         let validData = false;
+        let parsedRows = [];
 
         Papa.parse(csvText, {
           header: true,
@@ -228,9 +223,7 @@
                 validData = true;
               }
             }
-
-            // শুধু প্রথম 2000 row লোড করবো
-            if (validData && rowCount < 2000) {
+            if (validData && rowCount < 2000) { // শুধু প্রথম 2000 row লোড
               parsedRows.push(headers.map(h => row.data[h] || ""));
             }
             rowCount++;
@@ -240,10 +233,8 @@
               status.innerHTML = "<p style='color:red'>❌ Failed to parse Google Sheet data!</p>";
               return;
             }
-
             databases[dbName].rows = parsedRows;
             saveDatabases();
-
             status.innerHTML = `<p class='success'>✅ Upload Done! (${rowCount} total rows, showing first ${parsedRows.length})</p>`;
             openDatabases();
           },
@@ -258,7 +249,7 @@
       }
     }
 
-    // ✅ Open DB with pagination
+    // Open DB with pagination
     function openDatabase(dbName, page = 1) {
       const db = databases[dbName];
       const rowsPerPage = 100;

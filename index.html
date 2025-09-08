@@ -35,9 +35,9 @@
     .content { flex-grow:1; padding:20px; overflow:auto; }
 
     /* Table */
-    table { border-collapse:collapse; width:100%; margin-top:10px; }
-    th, td { border:1px solid #ccc; padding:6px; font-size:14px; }
-    th { background:#f4f4f4; position:sticky; top:0; }
+    table { border-collapse:collapse; width:100%; font-size:14px; }
+    th, td { border:1px solid #ccc; padding:6px; }
+    th { background:#f4f4f4; position:sticky; top:0; z-index:1; }
 
     /* Database item */
     .db-item {
@@ -179,7 +179,7 @@
       });
     }
 
-    // Google Sheet Import (live)
+    // Google Sheet Import
     function importGoogleSheet() {
       const url = document.getElementById("sheetUrl").value.trim();
       if (!url) return;
@@ -189,7 +189,7 @@
       openDatabases();
     }
 
-    // Open Database (CSV = local copy, GoogleSheet = live fetch)
+    // Open Database
     async function openDatabase(dbName, page = 1) {
       const db = databases[dbName];
 
@@ -219,7 +219,7 @@
       const totalPages = Math.ceil(db.rows.length / rowsPerPage);
 
       let tableHTML = `
-        <div style="overflow-x:auto; max-height:70vh; border:1px solid #ccc; border-radius:4px;">
+        <div style="overflow-x:auto; overflow-y:auto; max-height:70vh; border:1px solid #ccc; border-radius:4px; display:block;">
           <table>
             <thead>
               <tr>${db.headers.map(h => `<th>${h.name}</th>`).join("")}</tr>

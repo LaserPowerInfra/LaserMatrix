@@ -1,74 +1,105 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
   <meta charset="UTF-8">
   <title>Laser Matrix</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
   <style>
-    body { 
-      font-family: Arial, sans-serif; 
-      margin: 0; 
-      padding: 0; 
-      display: flex; 
-      height: 100vh; 
-    }
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; display: flex; }
 
-    /* Sidebar Menu */
-    #menu { 
-      background: #2c3e50; 
-      color: white; 
-      padding: 20px 10px; 
-      display: flex; 
-      flex-direction: column; 
-      gap: 15px; 
-      width: 200px; 
-      min-height: 100vh; 
+    /* Sidebar */
+    #menu {
+      background: #2c3e50;
+      color: white;
+      width: 200px;
+      height: 100vh;
+      padding: 15px;
+      box-sizing: border-box;
     }
-    #menu button { 
-      background: #34495e; 
-      color: white; 
-      border: none; 
-      padding: 10px; 
-      cursor: pointer; 
-      border-radius: 6px; 
+    #menu button {
+      display: block;
+      width: 100%;
+      margin: 8px 0;
+      padding: 10px;
+      background: #34495e;
+      color: white;
+      border: none;
+      cursor: pointer;
+      border-radius: 6px;
       text-align: left;
     }
-    #menu button:hover { background: #3d566e; }
+    #menu button:hover { background: #1abc9c; }
 
-    /* Main Content Area */
-    #content { 
-      flex-grow: 1; 
-      padding: 20px; 
-      overflow-y: auto; 
-    }
+    /* Content */
+    #content { flex-grow: 1; padding: 20px; }
 
     table { border-collapse: collapse; width: 100%; }
     th, td { border: 1px solid #ccc; padding: 5px; text-align: left; }
-    .db-item { display: flex; align-items: center; justify-content: space-between; border: 1px solid #ccc; margin: 5px 0; padding: 5px; border-radius: 4px; }
-    .db-menu { cursor: pointer; padding: 0 5px; }
-    .loading { color: orange; }
-    .success { color: green; }
+
+    /* Database list */
+    .db-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border: 1px solid #ccc;
+      margin: 5px 0;
+      padding: 5px;
+      border-radius: 4px;
+      background: #f9f9f9;
+    }
+    .db-left {
+      flex-grow: 1;
+      cursor: pointer;
+      padding-left: 8px;
+      text-align: left;
+    }
+    .db-menu {
+      cursor: pointer;
+      padding: 0 8px;
+    }
+
+    /* Popup menu */
+    #popupMenu {
+      position: absolute;
+      display: none;
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      min-width: 120px;
+    }
+    .menu-item {
+      padding: 8px 12px;
+      cursor: pointer;
+    }
+    .menu-item:hover {
+      background: #f0f0f0;
+    }
+    .menu-item:active {
+      background: #d0d0d0;
+    }
   </style>
 </head>
 <body onload="goHome()">
 
-  <!-- Sidebar Menu -->
+  <!-- Sidebar -->
   <div id="menu">
     <button onclick="goHome()">🏠 Home</button>
     <button onclick="openDatabases()">📊 Databases</button>
     <button onclick="openForms()">📝 Forms</button>
-    </div>
-
-  <!-- Main Content Area -->
-  <div id="content"></div>
-
-  <!-- Popup Menu -->
-  <div id="popupMenu" style="position:absolute; display:none; background:white; border:1px solid #ccc; padding:5px;">
-    <div onclick="renameDatabase()">✏ Rename</div>
-    <div onclick="deleteDatabase()">🗑 Delete</div>
+    <button onclick="goBack()">⬅ Back</button>
   </div>
 
-  <!-- Full Script -->
+  <!-- Main content -->
+  <div id="content"></div>
+
+  <!-- Popup menu -->
+  <div id="popupMenu">
+    <div class="menu-item" onclick="renameDatabase()">📝 Rename</div>
+    <div class="menu-item" onclick="deleteDatabase()">🗑 Delete</div>
+  </div>
+
+  <!-- Script -->
   <script>
     let databases = JSON.parse(localStorage.getItem("databases") || "{}");
     let currentPopupDB = null;
@@ -92,8 +123,8 @@
           ${Object.keys(databases).length ?
             Object.keys(databases).map(db => `
               <div class="db-item">
-                <div class="db-menu" onclick="showMenu(event, '${db}')">⋮</div>
                 <div class="db-left" onclick="openDatabase('${db}')">📊 ${db}</div>
+                <div class="db-menu" onclick="showMenu(event, '${db}')">⋮</div>
               </div>
             `).join("")
             : "<p>No databases yet.</p>"}
@@ -117,7 +148,7 @@
       `);
     }
 
-    // ✅ CSV Import
+    // CSV Import
     function importCSV() {
       const fileInput = document.getElementById("csvFile");
       const statusBox = document.getElementById("statusBox");
@@ -166,7 +197,7 @@
       });
     }
 
-    // ✅ Google Sheet Import
+    // Google Sheet Import
     async function importGoogleSheet() {
       const url = document.getElementById("sheetUrl").value.trim();
       const status = document.getElementById("sheetStatus");
@@ -174,10 +205,8 @@
 
       try {
         let csvUrl = url.includes("output=csv") ? url : url.replace("/edit", "/gviz/tq?tqx=out:csv");
-
         const response = await fetch("https://api.allorigins.win/raw?url=" + encodeURIComponent(csvUrl));
         if (!response.ok) throw new Error("Network error");
-
         const csvText = await response.text();
 
         let headers = [];
@@ -225,7 +254,7 @@
       }
     }
 
-    // ✅ Open DB with pagination
+    // Open DB with pagination
     function openDatabase(dbName, page = 1) {
       const db = databases[dbName];
       const rowsPerPage = 100;
@@ -269,6 +298,7 @@
       menu.style.top = rect.bottom + "px";
     }
     document.addEventListener("click", () => { document.getElementById("popupMenu").style.display = "none"; });
+
     function renameDatabase() {
       const newName = prompt("Enter new name:", currentPopupDB);
       if (newName && !databases[newName]) {
@@ -279,6 +309,7 @@
       }
       document.getElementById("popupMenu").style.display = "none";
     }
+
     function deleteDatabase() {
       if (confirm("Delete database '" + currentPopupDB + "'?")) {
         delete databases[currentPopupDB];

@@ -40,22 +40,21 @@
     .db-item {
       display: flex;
       align-items: center;
-      justify-content: space-between;
       border: 1px solid #ccc;
       margin: 5px 0;
       padding: 5px;
       border-radius: 4px;
       background: #f9f9f9;
     }
+    .db-menu {
+      cursor: pointer;
+      padding: 0 8px;
+    }
     .db-left {
       flex-grow: 1;
       cursor: pointer;
       padding-left: 8px;
       text-align: left;
-    }
-    .db-menu {
-      cursor: pointer;
-      padding: 0 8px;
     }
 
     /* Popup menu */
@@ -123,8 +122,8 @@
           ${Object.keys(databases).length ?
             Object.keys(databases).map(db => `
               <div class="db-item">
-                <div class="db-left" onclick="openDatabase('${db}')">📊 ${db}</div>
                 <div class="db-menu" onclick="showMenu(event, '${db}')">⋮</div>
+                <div class="db-left" onclick="openDatabase('${db}')">📊 ${db}</div>
               </div>
             `).join("")
             : "<p>No databases yet.</p>"}

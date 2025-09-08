@@ -86,7 +86,7 @@
     <button onclick="goHome()">🏠 Home</button>
     <button onclick="openDatabases()">📊 Databases</button>
     <button onclick="openForms()">📝 Forms</button>
-    </div>
+  </div>
 
   <!-- Main content -->
   <div id="content"></div>
@@ -146,7 +146,7 @@
       `);
     }
 
-    // CSV Import
+    // ✅ CSV Import
     function importCSV() {
       const fileInput = document.getElementById("csvFile");
       const statusBox = document.getElementById("statusBox");
@@ -195,7 +195,7 @@
       });
     }
 
-    // Google Sheet Import
+    // ✅ Google Sheet Import (Optimized for speed)
     async function importGoogleSheet() {
       const url = document.getElementById("sheetUrl").value.trim();
       const status = document.getElementById("sheetStatus");
@@ -209,6 +209,7 @@
 
         let headers = [];
         let rowCount = 0;
+        let parsedRows = [];
         let dbName = "GoogleSheetDB_" + Date.now();
         let validData = false;
 
@@ -227,8 +228,10 @@
                 validData = true;
               }
             }
-            if (validData && rowCount < 1000) {
-              databases[dbName].rows.push(headers.map(h => row.data[h] || ""));
+
+            // শুধু প্রথম 2000 row লোড করবো
+            if (validData && rowCount < 2000) {
+              parsedRows.push(headers.map(h => row.data[h] || ""));
             }
             rowCount++;
           },
@@ -237,8 +240,11 @@
               status.innerHTML = "<p style='color:red'>❌ Failed to parse Google Sheet data!</p>";
               return;
             }
+
+            databases[dbName].rows = parsedRows;
             saveDatabases();
-            status.innerHTML = `<p class='success'>✅ Upload Done! (${rowCount} rows, showing sample)</p>`;
+
+            status.innerHTML = `<p class='success'>✅ Upload Done! (${rowCount} total rows, showing first ${parsedRows.length})</p>`;
             openDatabases();
           },
           error: function () {
@@ -252,7 +258,7 @@
       }
     }
 
-    // Open DB with pagination
+    // ✅ Open DB with pagination
     function openDatabase(dbName, page = 1) {
       const db = databases[dbName];
       const rowsPerPage = 100;

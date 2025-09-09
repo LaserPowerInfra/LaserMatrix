@@ -10,8 +10,6 @@
     /* Sidebar */
     .sidebar {
       width: 220px;
-      min-width: 220px;
-      max-width: 220px;
       background: #2c3e50;
       color: white;
       padding: 15px;
@@ -63,9 +61,28 @@
     .db-left { flex-grow:1; cursor:pointer; padding-left:8px; text-align:left; }
 
     /* Table */
+    .table-wrapper {
+      width:100%;
+      margin:0 auto;
+      border:1px solid #ccc;
+      border-radius:6px;
+      overflow:auto;
+      max-height:70vh;
+    }
     table { border-collapse:collapse; width:100%; font-size:14px; }
-    th, td { border:1px solid #ccc; padding:6px; }
+    th, td { border:1px solid #ccc; padding:6px; text-align:left; }
     th { background:#f4f4f4; position:sticky; top:0; z-index:1; }
+
+    /* Pagination */
+    .pagination {
+      margin:12px 0;
+      text-align:center;
+    }
+    .pagination button, .pagination select {
+      margin:0 4px; padding:6px 10px; border:1px solid #ccc; border-radius:4px;
+      cursor:pointer; background:#f9f9f9;
+    }
+    .pagination button:disabled { opacity:0.5; cursor:not-allowed; }
 
     /* Popup menu */
     #popupMenu {
@@ -232,8 +249,13 @@ async function openDatabase(dbName, page=1){
   const end = start+rowsPerPage;
   const totalPages = Math.ceil(db.rows.length/rowsPerPage);
 
+  let options = "";
+  for(let i=1;i<=totalPages;i++){
+    options += `<option value="${i}" ${i===page?"selected":""}>${i}</option>`;
+  }
+
   let tableHTML = `
-    <div style="overflow-x:auto; overflow-y:auto; max-height:70vh; border:1px solid #ccc; border-radius:4px; display:block;">
+    <div class="table-wrapper">
       <table>
         <thead>
           <tr>${db.headers.map(h=>`<th>${h.name}</th>`).join("")}</tr>
@@ -243,9 +265,9 @@ async function openDatabase(dbName, page=1){
         </tbody>
       </table>
     </div>
-    <div style="margin-top:10px; text-align:center;">
+    <div class="pagination">
       <button onclick="openDatabase('${dbName}',${page-1})" ${page===1?"disabled":""}>⬅ Prev</button>
-      <span> Page ${page} of ${totalPages} </span>
+      <select onchange="openDatabase('${dbName}',this.value)">${options}</select>
       <button onclick="openDatabase('${dbName}',${page+1})" ${page===totalPages?"disabled":""}>Next ➡</button>
     </div>
   `;

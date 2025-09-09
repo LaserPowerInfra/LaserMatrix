@@ -41,29 +41,34 @@
     }
     .sidebar button:hover { background:#1abc9c; }
 
-    /* Main middle area */
-    .content { flex-grow:1; display:flex; flex-direction:row; overflow:hidden; }
+    /* Main area */
+    .content { flex-grow:1; display:flex; flex-direction:column; overflow:auto; background:#fff; }
 
-    /* Left content area */
-    .main-content {
-      flex-grow:1;
-      padding:20px;
-      overflow:auto;
-    }
-
-    /* Right video panel (inside content) */
-    .right-panel {
-      width: 350px;
-      background:#000;
-      flex-shrink:0;
+    /* Home page layout */
+    .home-container {
       display:flex;
       align-items:center;
-      justify-content:center;
-    }
-    .right-panel video {
-      width:100%;
+      justify-content:space-between;
       height:100%;
-      object-fit:cover;
+      padding:40px;
+    }
+    .home-text {
+      flex:1;
+    }
+    .home-text h2 { font-size:28px; margin:0; }
+    .home-text h1 { font-size:48px; color:#1abc9c; margin:10px 0 0; letter-spacing:3px; }
+
+    .home-video {
+      flex:1;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+    }
+    .home-video video {
+      max-width:100%;
+      max-height:70vh;
+      border-radius:10px;
+      box-shadow:0 2px 8px rgba(0,0,0,0.2);
     }
 
     /* Database page fixed header */
@@ -129,19 +134,8 @@
     <button onclick="openForms()">📝 Forms</button>
   </div>
 
-  <!-- Main content + video panel -->
-  <div class="content">
-    <!-- Dynamic content -->
-    <div id="content" class="main-content"></div>
-
-    <!-- Right video panel -->
-    <div class="right-panel">
-      <video autoplay muted loop>
-        <source src="https://laserpowerinfra.com/frontassets/img/slider/Banner_v04_HD_L.mp4" type="video/mp4">
-        Your browser does not support the video tag.
-      </video>
-    </div>
-  </div>
+  <!-- Main content -->
+  <div id="content" class="content"></div>
 
   <!-- Popup menu -->
   <div id="popupMenu">
@@ -152,24 +146,28 @@
 <script>
 let databases = JSON.parse(localStorage.getItem("databases") || "{}");
 let currentPopupDB = null;
-let historyStack = [];
 let dbPage = 1;   
 const dbPerPage = 10; 
 
 function saveDatabases() { localStorage.setItem("databases", JSON.stringify(databases)); }
 
-function setContent(html, saveHistory=true) {
-  const content = document.getElementById("content");
-  if(saveHistory) historyStack.push(content.innerHTML);
-  content.innerHTML = html;
+function setContent(html) {
+  document.getElementById("content").innerHTML = html;
 }
 
 // Home page
 function goHome() { 
   setContent(`
-    <div style="text-align:center; margin-top:100px;">
-      <h2 style="font-size:28px; margin-bottom:10px;">Welcome To</h2>
-      <h1 style="font-size:48px; color:#1abc9c; letter-spacing:3px;">LASER MATRIX</h1>
+    <div class="home-container">
+      <div class="home-text">
+        <h2>Welcome To</h2>
+        <h1>LASER MATRIX</h1>
+      </div>
+      <div class="home-video">
+        <video autoplay muted loop>
+          <source src="https://laserpowerinfra.com/frontassets/img/slider/Banner_v04_HD_L.mp4" type="video/mp4">
+        </video>
+      </div>
     </div>
   `); 
 }
@@ -316,7 +314,7 @@ async function openDatabase(dbName, page=1){
       <label>Go to page: <input type="number" id="manualPage" min="1" max="${totalPages}" value="${page}" onchange="jumpToPage('${dbName}', this.value)"></label>
     </div>
   `;
-  setContent(`<h2 style="padding:10px">${dbName}</h2>${tableHTML}`, false);
+  setContent(`<h2 style="padding:10px">${dbName}</h2>${tableHTML}`);
 }
 
 function jumpToPage(dbName, val){

@@ -184,12 +184,27 @@
         box-shadow: 0 6px 20px rgba(0,0,0,0.15);
         border-radius: 6px;
         z-index: 40;
-        width: 220px;
+        width: 240px;
+    }
+    .filter-popup-header, .filter-popup-footer {
+        padding: 8px;
+        background-color: #f7f8fa;
+        font-size: 13px;
+    }
+    .filter-popup-footer {
+        text-align: right;
+        border-top: 1px solid #eee;
+    }
+    .filter-popup-footer button {
+        padding: 6px 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-left: 6px;
     }
     .filter-popup-search {
         padding: 8px;
         border-bottom: 1px solid #eee;
-        background: #f9f9f9;
     }
     .filter-popup-search input {
         width: 100%;
@@ -199,17 +214,21 @@
         border-radius: 4px;
     }
     .filter-popup-list {
-        max-height: 220px;
+        max-height: 200px;
         overflow-y: auto;
     }
-    .filter-popup-list div {
-        padding: 8px 12px;
+    .filter-popup-list label {
+        display: block;
+        padding: 6px 12px;
         cursor: pointer;
         font-size: 13px;
         border-bottom: 1px solid #f0f0f0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
     }
-    .filter-popup-list div:hover { background-color: #f5f5f5; }
-    .filter-popup-list div:last-child { border-bottom: none; }
+    .filter-popup-list label:hover { background-color: #f5f5f5; }
+    .filter-popup-list label:last-child { border-bottom: none; }
   </style>
 </head>
 <body>
@@ -242,8 +261,6 @@
   const hero = document.getElementById('hero');
   const panelArea = document.getElementById('panelArea');
   let currentPopupDB = null;
-  
-  // Global variables for the currently open database and active filters
   let currentDbName = null;
   let activeFilters = {};
 
@@ -321,19 +338,25 @@
     openDatabases();
   }
   
-  // --- New and Improved Filter Logic ---
+  // --- Multi-Select Filter Logic ---
 
   function filterMenuOptions() {
     const searchTerm = document.getElementById('filter-search-input').value.toLowerCase();
-    const options = document.querySelectorAll('#filter-options-list .filter-option');
+    const options = document.querySelectorAll('#filter-options-list label');
     options.forEach(option => {
         const text = option.textContent.toLowerCase();
-        option.style.display = text.includes(searchTerm) ? '' : 'none';
+        option.style.display = text.includes(searchTerm) ? 'flex' : 'none';
     });
+  }
+  
+  function toggleAllFilterCheckboxes(masterCheckbox) {
+      const checkboxes = document.querySelectorAll('#filter-options-list .filter-option-cb');
+      checkboxes.forEach(cb => cb.checked = masterCheckbox.checked);
   }
 
   function showFilterMenu(event, columnIndex) {
     event.stopPropagation();
+    hideFilterMenu(); // Hide any other open menu
     const db = databases[currentDbName];
     if (!db) return;
     
@@ -341,20 +364,29 @@
     db.rows.forEach(row => {
         if(row[columnIndex]) uniqueValues.add(row[columnIndex]);
     });
+    
+    const currentSelection = new Set(activeFilters[columnIndex] || []);
+    let allSelected = true;
 
-    const menu = document.getElementById('filterMenu');
     let listItemsHtml = '';
     [...uniqueValues].sort().forEach(value => {
-        listItemsHtml += `<div class="filter-option" onclick="applyFilter(${columnIndex}, '${escapeJs(value)}')">${escapeHtml(value)}</div>`;
+        const isChecked = currentSelection.size === 0 || currentSelection.has(value);
+        if (!isChecked) allSelected = false;
+        listItemsHtml += `<label><input type="checkbox" class="filter-option-cb" value="${escapeHtml(value)}" ${isChecked ? 'checked' : ''}> ${escapeHtml(value)}</label>`;
     });
 
+    const menu = document.getElementById('filterMenu');
     menu.innerHTML = `
+        <div class="filter-popup-header">
+            <label><input type="checkbox" id="filter-select-all" onchange="toggleAllFilterCheckboxes(this)" ${allSelected ? 'checked' : ''}> <b>(Select All)</b></label>
+        </div>
         <div class="filter-popup-search">
             <input type="text" id="filter-search-input" onkeyup="filterMenuOptions()" placeholder="Search options...">
         </div>
-        <div class="filter-popup-list" id="filter-options-list">
-            <div onclick="applyFilter(${columnIndex}, '--all--')"><b>(All)</b></div>
-            ${listItemsHtml}
+        <div class="filter-popup-list" id="filter-options-list">${listItemsHtml}</div>
+        <div class="filter-popup-footer">
+            <button onclick="hideFilterMenu()">Cancel</button>
+            <button onclick="applyMultiSelectFilter(${columnIndex})" style="background-color:var(--accent); color:white;">Apply</button>
         </div>
     `;
     
@@ -364,13 +396,22 @@
     document.getElementById('filter-search-input').focus();
   }
 
-  function applyFilter(columnIndex, value) {
-    if (value === '--all--') {
-        delete activeFilters[columnIndex];
+  function applyMultiSelectFilter(columnIndex) {
+    const selectedValues = [];
+    document.querySelectorAll('#filter-options-list .filter-option-cb:checked').forEach(cb => {
+        selectedValues.push(cb.value);
+    });
+
+    if (selectedValues.length > 0) {
+        activeFilters[columnIndex] = selectedValues;
     } else {
-        activeFilters[columnIndex] = value;
+        delete activeFilters[columnIndex];
     }
     renderTableBody();
+    hideFilterMenu();
+  }
+  
+  function hideFilterMenu() {
     document.getElementById('filterMenu').style.display = 'none';
   }
 
@@ -383,8 +424,10 @@
 
     if(filterKeys.length > 0) {
         filteredRows = db.rows.filter(row => {
-            return filterKeys.every(key => {
-                return String(row[key]) === String(activeFilters[key]);
+            return filterKeys.every(colIndex => {
+                const selectedValues = activeFilters[colIndex];
+                if (!selectedValues || selectedValues.length === 0) return true;
+                return selectedValues.includes(String(row[colIndex]));
             });
         });
     }
@@ -436,7 +479,7 @@
   }
   document.addEventListener('click', ()=> {
     document.getElementById('popupMenu').style.display='none'
-    document.getElementById('filterMenu').style.display = 'none';
+    hideFilterMenu();
   });
 
   function renameDatabase(){

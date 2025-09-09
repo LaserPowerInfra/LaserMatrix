@@ -395,11 +395,8 @@
     const db = databases[currentDbName];
     if (!db) return;
     
-    // Create a temporary filter object excluding the current column's filter
     const tempFilters = { ...activeFilters };
     delete tempFilters[columnIndex];
-    
-    // Get the rows that are visible based on OTHER active filters
     const relevantRows = getFilteredRows(tempFilters);
 
     const uniqueValues = new Set();
@@ -466,24 +463,17 @@
     } else {
         activeFilters[columnIndex] = selectedValues;
     }
-    renderTableBody();
+    renderFilteredAndPagedTable(1);
     hideFilterMenu();
   }
   
   function hideFilterMenu() {
     document.getElementById('filterMenu').style.display = 'none';
   }
-
-  function renderTableBody() {
-    const filteredRows = getFilteredRows();
-    const bodyHtml = filteredRows.map(r => `<tr>${r.map(c => `<td>${escapeHtml(String(c||''))}</td>`).join('')}</tr>`).join('');
-    document.getElementById('data-table-body').innerHTML = bodyHtml;
-    updateFilterIcons();
-  }
   
   function clearAllFilters() {
     activeFilters = {};
-    renderTableBody();
+    renderFilteredAndPagedTable(1);
   }
   
   function updateFilterIcons() {
@@ -500,6 +490,31 @@
           }
       });
   }
+  
+  function renderFilteredAndPagedTable(page = 1) {
+    const filteredRows = getFilteredRows();
+    const rowsPerPage = 100; // You can change this value
+    
+    const totalPages = Math.max(1, Math.ceil(filteredRows.length / rowsPerPage));
+    page = Math.min(Math.max(1, page), totalPages);
+    
+    const start = (page - 1) * rowsPerPage;
+    const end = start + rowsPerPage;
+    const paginatedRows = filteredRows.slice(start, end);
+
+    const bodyHtml = paginatedRows.map(r => `<tr>${r.map(c => `<td>${escapeHtml(String(c||''))}</td>`).join('')}</tr>`).join('');
+    document.getElementById('data-table-body').innerHTML = bodyHtml;
+    
+    const paginationHtml = `
+        <button class="btn" onclick="renderFilteredAndPagedTable(${page - 1})" ${page === 1 ? 'disabled' : ''}>⬅ Prev</button>
+        <span style="margin:0 8px">Page ${page} of ${totalPages}</span>
+        <button class="btn" onclick="renderFilteredAndPagedTable(${page + 1})" ${page === totalPages ? 'disabled' : ''}>Next ➡</button>
+    `;
+    document.getElementById('pagination-container').innerHTML = `<div class="pagination">${paginationHtml}</div>`;
+
+    updateFilterIcons();
+  }
+  // --- End of Filter Logic ---
 
   async function openDatabase(dbName){
     currentDbName = dbName;
@@ -526,6 +541,7 @@
             <tbody id="data-table-body"></tbody>
           </table>
         </div>
+        <div id="pagination-container"></div>
       </div>
     `;
 
@@ -533,7 +549,7 @@
     hero.innerHTML = '';
     hero.style.display = 'none';
     panelArea.innerHTML = tableHtml;
-    renderTableBody();
+    renderFilteredAndPagedTable(1);
   }
 
   function showMenu(ev, dbName){

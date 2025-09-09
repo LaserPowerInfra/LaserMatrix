@@ -62,15 +62,15 @@
       -webkit-filter:brightness(0.7) saturate(1.05);filter:brightness(0.7) saturate(1.05);
     }
 
-    .hero .overlay-top{
+    /* Changed position of overlay to bottom-left */
+    .hero .overlay-bottom{
       position:absolute;
-      top:28px;
-      left:50%;
-      transform:translateX(-50%);
+      bottom:28px;
+      left:30px;
       width:calc(100% - var(--sidebar-w) - 60px);
       max-width:1200px;
       pointer-events:none;
-      text-align:center;
+      text-align:left;
       z-index:5;
     }
 
@@ -99,6 +99,11 @@
       color:transparent;
       font-size:56px;
       -webkit-text-stroke: 1px rgba(10,10,10,0.12);
+      text-shadow:
+        0 1px 0 rgba(0,0,0,0.15),
+        0 2px 0 rgba(0,0,0,0.12),
+        0 3px 0 rgba(0,0,0,0.10),
+        0 4px 10px rgba(0,0,0,0.35);
       transform-origin:center top;
       transform: translateZ(40px) rotateX(6deg);
       display:block;
@@ -119,7 +124,7 @@
 
     @media (max-width:1000px){
       .three-d{font-size:40px}
-      .hero .overlay-top{top:20px}
+      .hero .overlay-bottom{top:20px}
     }
     @media (max-width:700px){
       .three-d{font-size:28px}
@@ -182,7 +187,7 @@
 
   function renderHeroOverlay(){
     return `
-      <div class="overlay-top" aria-hidden="true">
+      <div class="overlay-bottom" aria-hidden="true">
         <div class="sub-title">WELCOME TO</div>
         <div class="three-d" data-text="LASER MATRIX">LASER MATRIX</div>
       </div>
@@ -244,113 +249,7 @@
         <button class="btn" onclick="openDatabases(${page-1}, document.getElementById('dbSearchInput')?.value||'')" ${page===1? 'disabled':''}>⬅ Prev</button>
         <span style="margin:0 10px">Page ${page} of ${totalPages}</span>
         <button class="btn" onclick="openDatabases(${page+1}, document.getElementById('dbSearchInput')?.value||'')" ${page===totalPages? 'disabled':''}>Next ➡</button>
-      </div>
-    `;
-    panelArea.innerHTML = html;
-  }
-
-  function searchDatabases(val){ openDatabases(1, val); }
-
-  function showImportForm(){
-    hero.innerHTML = '';
-    panelArea.style.display = 'block';
-    panelArea.innerHTML = `
-      <div style="font-weight:700;margin-bottom:12px">Add Database</div>
-      <div style="background:#fff;padding:12px;border-radius:8px">
-        <div style="margin-bottom:12px">
-          <label><strong>From CSV</strong></label><br>
-          <input type="file" id="csvFile" accept=".csv">
-          <button class="btn" style="margin-left:8px" onclick="importCSV()">Upload</button>
-          <div id="statusBox" style="margin-top:8px"></div>
-        </div>
-        <div>
-          <label><strong>From Google Sheet</strong></label><br>
-          <input type="text" id="sheetUrl" placeholder="Paste Google Sheet link here" style="width:60%">
-          <button class="btn" onclick="importGoogleSheet()">Add</button>
-        </div>
-      </div>
-    `;
-  }
-
-  function importCSV(){
-    const fi = document.getElementById('csvFile');
-    const status = document.getElementById('statusBox');
-    status.textContent = '';
-    if(!fi || !fi.files || !fi.files.length){ status.textContent = '⚠️ Select a CSV file'; return; }
-    const file = fi.files[0];
-    const dbName = file.name.replace(/\.csv$/i,'') || ('csvdb_' + Date.now());
-    status.textContent = '⏳ Parsing...';
-    Papa.parse(file, {
-      header:true, skipEmptyLines:true, complete(res){
-        const fields = res.meta.fields || [];
-        const rows = res.data || [];
-        databases[dbName] = {
-          type:'csv',
-          headers: fields.map(h => ({name:h, type:'Text'})),
-          rows: rows.map(r => fields.map(f => r[f] || ''))
-        };
-        localStorage.setItem('databases', JSON.stringify(databases));
-        updateDbCount();
-        status.textContent = `✅ Imported ${rows.length} rows as "${dbName}"`;
-        openDatabases();
-      },
-      error(err){
-        status.textContent = '❌ Failed: ' + (err.message || 'parse error');
-      }
-    });
-  }
-
-  function importGoogleSheet(){
-    const url = document.getElementById('sheetUrl').value.trim();
-    if(!url){ alert('Paste Google Sheet url'); return; }
-    const name = 'GoogleSheetDB_' + Date.now();
-    databases[name] = { type:'gsheet', url:url, headers:[], rows:[] };
-    localStorage.setItem('databases', JSON.stringify(databases));
-    updateDbCount();
-    openDatabases();
-  }
-
-  async function openDatabase(dbName, page=1){
-    const db = databases[dbName];
-    if(!db){ alert('DB not found'); return; }
-    if(db.type === 'gsheet' && db.url){
-      let csvUrl = db.url;
-      if(db.url.includes('/edit')) csvUrl = db.url.replace('/edit','/gviz/tq?tqx=out:csv');
-      else if(db.url.includes('output=csv')) csvUrl = db.url;
-      else if(db.url.includes('/pub')) csvUrl = db.url.includes('output=csv') ? db.url : db.url.replace('/pub','/pub?output=csv');
-      try{
-        const r = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(csvUrl));
-        const txt = await r.text();
-        const parsed = Papa.parse(txt, { header:true, skipEmptyLines:true });
-        db.headers = parsed.meta.fields.map(f=>({name:f,type:'Text'}));
-        db.rows = parsed.data.map(row => db.headers.map(h => row[h.name] || ''));
-        databases[dbName] = db;
-        localStorage.setItem('databases', JSON.stringify(databases));
-      }catch(e){ console.warn('gsheet fetch failed', e); }
-    }
-
-    const rowsPerPage = 100;
-    const start = (page-1)*rowsPerPage;
-    const end = start + rowsPerPage;
-    const totalPages = Math.max(1, Math.ceil((db.rows||[]).length / rowsPerPage));
-
-    const tableHtml = `
-      <div style="font-weight:700;margin-bottom:12px">${escapeHtml(dbName)}</div>
-      <div class="table-wrap">
-        <div style="overflow:auto;max-height:420px">
-          <table>
-            <thead><tr>${(db.headers||[]).map(h => `<th>${escapeHtml(h.name)}</th>`).join('')}</tr></thead>
-            <tbody>
-              ${(db.rows||[]).slice(start,end).map(r => `<tr>${r.map(c => `<td>${escapeHtml(String(c||''))}</td>`).join('')}</tr>`).join('')}
-            </tbody>
-          </table>
-        </div>
-        <div class="pagination">
-          <button class="btn" onclick="openDatabase('${escapeJs(dbName)}',${page-1})" ${page===1? 'disabled':''}>⬅ Prev</button>
-          <span style="margin:0 8px">Page ${page} of ${totalPages}</span>
-          <button class="btn" onclick="openDatabase('${escapeJs(dbName)}',${page+1})" ${page===totalPages? 'disabled':''}>Next ➡</button>
-          <div style="margin-top:10px">Go to page: <input type="number" min="1" max="${totalPages}" value="${page}" onchange="jumpToPage('${escapeJs(dbName)}', this.value)"></div>
-        </div>
+        <div style="margin-top:10px">Go to page: <input type="number" min="1" max="${totalPages}" value="${page}" onchange="jumpToPage('${escapeJs(dbName)}', this.value)"></div>
       </div>
     `;
 

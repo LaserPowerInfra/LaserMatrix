@@ -172,11 +172,8 @@
 <script>
   // --- data & helpers ---
   let databases = JSON.parse(localStorage.getItem("databases") || "{}");
-  // const dbCountElem = document.getElementById('dbCount'); - REMOVED
   const hero = document.getElementById('hero');
   const panelArea = document.getElementById('panelArea');
-
-  // function updateDbCount(){ ... } - REMOVED
 
   // slide-in HTML for overlay text at top with 3D appearance
   function renderHeroOverlay(){
@@ -192,6 +189,7 @@
   function goHome(){
     // hide panel area
     panelArea.style.display = 'none';
+    hero.style.display = ''; // Ensure hero is visible
 
     // populate hero with video + overlay (video covers whole hero)
     hero.innerHTML = `
@@ -204,7 +202,6 @@
   }
 
   function openForms(){
-    // remove hero video and overlay (or keep, but we hide hero)
     hero.innerHTML = '';
     panelArea.style.display = 'block';
     panelArea.innerHTML = `<div style="font-weight:700;margin-bottom:10px">Forms</div>
@@ -215,7 +212,6 @@
   let dbPage = 1, dbPerPage = 10, currentPopupDB = null;
 
   function openDatabases(page=1, searchTerm=''){
-    // hide hero video (or keep hero but we will show panel below — per earlier requests we show DB in panel)
     hero.innerHTML = ''; // hide hero when viewing DBs
     panelArea.style.display = 'block';
 
@@ -291,7 +287,8 @@
     status.textContent = '';
     if(!fi || !fi.files || !fi.files.length){ status.textContent = '⚠️ Select a CSV file'; return; }
     const file = fi.files[0];
-    const dbName = file.name.replace(/\.csv$/i,'') || ('csvdb_' a_ + Date.now());
+    // The typo was here. It has been corrected.
+    const dbName = file.name.replace(/\.csv$/i,'') || ('csvdb_' + Date.now());
     status.textContent = '⏳ Parsing...';
     Papa.parse(file, {
       header:true, skipEmptyLines:true, complete(res){
@@ -303,7 +300,6 @@
           rows: rows.map(r => fields.map(f => r[f] || ''))
         };
         localStorage.setItem('databases', JSON.stringify(databases));
-        // updateDbCount(); - REMOVED
         status.textContent = `✅ Imported ${rows.length} rows as "${dbName}"`;
         openDatabases();
       },
@@ -319,7 +315,6 @@
     const name = 'GoogleSheetDB_' + Date.now();
     databases[name] = { type:'gsheet', url:url, headers:[], rows:[] };
     localStorage.setItem('databases', JSON.stringify(databases));
-    // updateDbCount(); - REMOVED
     openDatabases();
   }
 
@@ -396,14 +391,12 @@
     databases[newName] = databases[currentPopupDB];
     delete databases[currentPopupDB];
     localStorage.setItem('databases', JSON.stringify(databases));
-    // updateDbCount(); - REMOVED
     openDatabases();
   }
   function deleteDatabase(){
     if(!confirm('Delete database "'+currentPopupDB+'" ?')) return;
     delete databases[currentPopupDB];
     localStorage.setItem('databases', JSON.stringify(databases));
-    // updateDbCount(); - REMOVED
     openDatabases();
   }
 
@@ -413,7 +406,6 @@
 
   // initial view
   goHome();
-  // updateDbCount(); - REMOVED
 </script>
 </body>
 </html>

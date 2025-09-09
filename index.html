@@ -351,6 +351,25 @@
   }
   
   // --- Multi-Select Filter Logic ---
+  
+  function getFilteredRows(filtersToApply = activeFilters) {
+    const db = databases[currentDbName];
+    if (!db) return [];
+    
+    let filteredRows = db.rows;
+    const filterKeys = Object.keys(filtersToApply);
+
+    if(filterKeys.length > 0) {
+        filteredRows = db.rows.filter(row => {
+            return filterKeys.every(colIndex => {
+                const selectedValues = filtersToApply[colIndex];
+                if (!selectedValues || selectedValues.length === 0) return true;
+                return selectedValues.includes(String(row[colIndex]));
+            });
+        });
+    }
+    return filteredRows;
+  }
 
   function filterMenuOptions() {
     const searchTerm = document.getElementById('filter-search-input').value.toLowerCase();
@@ -376,26 +395,31 @@
     const db = databases[currentDbName];
     if (!db) return;
     
+    // Create a temporary filter object excluding the current column's filter
+    const tempFilters = { ...activeFilters };
+    delete tempFilters[columnIndex];
+    
+    // Get the rows that are visible based on OTHER active filters
+    const relevantRows = getFilteredRows(tempFilters);
+
     const uniqueValues = new Set();
-    db.rows.forEach(row => {
+    relevantRows.forEach(row => {
         if(row[columnIndex] !== '' && row[columnIndex] !== null) uniqueValues.add(row[columnIndex]);
     });
     
     const currentSelection = new Set(activeFilters[columnIndex] || []);
     let sortedValues = [...uniqueValues];
 
-    // **** NEW SORTING LOGIC ****
-    // If a filter is active for this column, sort selected items to the top.
     if (currentSelection.size > 0) {
         sortedValues.sort((a, b) => {
             const aIsSelected = currentSelection.has(a);
             const bIsSelected = currentSelection.has(b);
-            if (aIsSelected && !bIsSelected) return -1; // a comes first
-            if (!aIsSelected && bIsSelected) return 1;  // b comes first
-            return String(a).localeCompare(String(b)); // otherwise, sort alphabetically
+            if (aIsSelected && !bIsSelected) return -1;
+            if (!aIsSelected && bIsSelected) return 1;
+            return String(a).localeCompare(String(b));
         });
     } else {
-        sortedValues.sort((a,b) => String(a).localeCompare(String(b))); // Default alphabetical sort
+        sortedValues.sort((a,b) => String(a).localeCompare(String(b)));
     }
     
     let listItemsHtml = '';
@@ -432,12 +456,12 @@
         selectedValues.push(cb.value);
     });
 
-    const allValues = [];
+    const allValuesInMenu = [];
     document.querySelectorAll('#filter-options-list .filter-option-cb').forEach(cb => {
-        allValues.push(cb.value);
+        allValuesInMenu.push(cb.value);
     });
 
-    if (selectedValues.length === allValues.length || selectedValues.length === 0) {
+    if (selectedValues.length === allValuesInMenu.length || selectedValues.length === 0) {
         delete activeFilters[columnIndex];
     } else {
         activeFilters[columnIndex] = selectedValues;
@@ -451,22 +475,7 @@
   }
 
   function renderTableBody() {
-    const db = databases[currentDbName];
-    if (!db) return;
-
-    let filteredRows = db.rows;
-    const filterKeys = Object.keys(activeFilters);
-
-    if(filterKeys.length > 0) {
-        filteredRows = db.rows.filter(row => {
-            return filterKeys.every(colIndex => {
-                const selectedValues = activeFilters[colIndex];
-                if (!selectedValues || selectedValues.length === 0) return true;
-                return selectedValues.includes(String(row[colIndex]));
-            });
-        });
-    }
-
+    const filteredRows = getFilteredRows();
     const bodyHtml = filteredRows.map(r => `<tr>${r.map(c => `<td>${escapeHtml(String(c||''))}</td>`).join('')}</tr>`).join('');
     document.getElementById('data-table-body').innerHTML = bodyHtml;
     updateFilterIcons();
@@ -478,12 +487,16 @@
   }
   
   function updateFilterIcons() {
-      const headers = document.querySelectorAll('#data-table .filter-icon');
-      headers.forEach((icon, index) => {
-          if (activeFilters[index] && activeFilters[index].length > 0) {
-              icon.classList.add('active-filter');
-          } else {
-              icon.classList.remove('active-filter');
+      const db = databases[currentDbName];
+      if (!db) return;
+      db.headers.forEach((header, index) => {
+          const icon = document.getElementById(`filter-icon-${index}`);
+          if (icon) {
+              if (activeFilters[index] && activeFilters[index].length > 0) {
+                  icon.classList.add('active-filter');
+              } else {
+                  icon.classList.remove('active-filter');
+              }
           }
       });
   }

@@ -39,7 +39,6 @@
     }
     .sidebar button:hover{background:var(--accent); color:#063; box-shadow:0 6px 18px rgba(26,188,156,0.12);}
     .sidebar .spacer{flex-grow:1}
-    .sidebar .count{background:rgba(255,255,255,0.06);padding:8px;border-radius:6px;text-align:center;font-size:13px}
 
     /* Main content area (fills remaining width) */
     .main {
@@ -96,7 +95,6 @@
       color:transparent;
       font-size:56px; /* large */
       -webkit-text-stroke: 1px rgba(10,10,10,0.12);
-      /* SHADOW REMOVED FROM HERE */
       transform-origin:center top;
       /* subtle 3d tilt */
       transform: translateZ(40px) rotateX(6deg);
@@ -114,8 +112,6 @@
       font-size:20px;
       margin-bottom:8px;
     }
-    
-    /* "extrude" pseudo-layer REMOVED */
 
     /* responsive adjustments */
     @media (max-width:1000px){
@@ -158,8 +154,7 @@
     <button onclick="openDatabases()">📊 Databases</button>
     <button onclick="openForms()">📝 Forms</button>
     <div class="spacer"></div>
-    <div class="count" id="dbCount">0 Databases</div>
-  </aside>
+    </aside>
 
   <main class="main" id="main">
     <section class="hero" id="hero">
@@ -177,14 +172,11 @@
 <script>
   // --- data & helpers ---
   let databases = JSON.parse(localStorage.getItem("databases") || "{}");
-  const dbCountElem = document.getElementById('dbCount');
+  // const dbCountElem = document.getElementById('dbCount'); - REMOVED
   const hero = document.getElementById('hero');
   const panelArea = document.getElementById('panelArea');
 
-  function updateDbCount(){
-    dbCountElem.textContent = Object.keys(databases).length + " Databases";
-  }
-  updateDbCount();
+  // function updateDbCount(){ ... } - REMOVED
 
   // slide-in HTML for overlay text at top with 3D appearance
   function renderHeroOverlay(){
@@ -299,7 +291,7 @@
     status.textContent = '';
     if(!fi || !fi.files || !fi.files.length){ status.textContent = '⚠️ Select a CSV file'; return; }
     const file = fi.files[0];
-    const dbName = file.name.replace(/\.csv$/i,'') || ('csvdb_' + Date.now());
+    const dbName = file.name.replace(/\.csv$/i,'') || ('csvdb_' a_ + Date.now());
     status.textContent = '⏳ Parsing...';
     Papa.parse(file, {
       header:true, skipEmptyLines:true, complete(res){
@@ -311,7 +303,7 @@
           rows: rows.map(r => fields.map(f => r[f] || ''))
         };
         localStorage.setItem('databases', JSON.stringify(databases));
-        updateDbCount();
+        // updateDbCount(); - REMOVED
         status.textContent = `✅ Imported ${rows.length} rows as "${dbName}"`;
         openDatabases();
       },
@@ -327,7 +319,7 @@
     const name = 'GoogleSheetDB_' + Date.now();
     databases[name] = { type:'gsheet', url:url, headers:[], rows:[] };
     localStorage.setItem('databases', JSON.stringify(databases));
-    updateDbCount();
+    // updateDbCount(); - REMOVED
     openDatabases();
   }
 
@@ -404,14 +396,14 @@
     databases[newName] = databases[currentPopupDB];
     delete databases[currentPopupDB];
     localStorage.setItem('databases', JSON.stringify(databases));
-    updateDbCount();
+    // updateDbCount(); - REMOVED
     openDatabases();
   }
   function deleteDatabase(){
     if(!confirm('Delete database "'+currentPopupDB+'" ?')) return;
     delete databases[currentPopupDB];
     localStorage.setItem('databases', JSON.stringify(databases));
-    updateDbCount();
+    // updateDbCount(); - REMOVED
     openDatabases();
   }
 
@@ -421,7 +413,7 @@
 
   // initial view
   goHome();
-  updateDbCount();
+  // updateDbCount(); - REMOVED
 </script>
 </body>
 </html>

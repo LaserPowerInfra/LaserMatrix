@@ -41,10 +41,17 @@
     }
     .sidebar button:hover { background:#1abc9c; }
 
-    /* Content middle */
-    .content { flex-grow:1; padding:0; display:flex; flex-direction:column; overflow:auto; }
+    /* Main middle area */
+    .content { flex-grow:1; display:flex; flex-direction:row; overflow:hidden; }
 
-    /* Right video panel */
+    /* Left content area */
+    .main-content {
+      flex-grow:1;
+      padding:20px;
+      overflow:auto;
+    }
+
+    /* Right video panel (inside content) */
     .right-panel {
       width: 350px;
       background:#000;
@@ -122,15 +129,18 @@
     <button onclick="openForms()">📝 Forms</button>
   </div>
 
-  <!-- Main content -->
-  <div id="content" class="content"></div>
+  <!-- Main content + video panel -->
+  <div class="content">
+    <!-- Dynamic content -->
+    <div id="content" class="main-content"></div>
 
-  <!-- Right video panel -->
-  <div class="right-panel">
-    <video autoplay muted loop>
-      <source src="https://laserpowerinfra.com/frontassets/img/slider/Banner_v04_HD_L.mp4" type="video/mp4">
-      Your browser does not support the video tag.
-    </video>
+    <!-- Right video panel -->
+    <div class="right-panel">
+      <video autoplay muted loop>
+        <source src="https://laserpowerinfra.com/frontassets/img/slider/Banner_v04_HD_L.mp4" type="video/mp4">
+        Your browser does not support the video tag.
+      </video>
+    </div>
   </div>
 
   <!-- Popup menu -->
@@ -146,21 +156,26 @@ let historyStack = [];
 let dbPage = 1;   
 const dbPerPage = 10; 
 
-// Save databases
 function saveDatabases() { localStorage.setItem("databases", JSON.stringify(databases)); }
 
-// Set content
 function setContent(html, saveHistory=true) {
   const content = document.getElementById("content");
   if(saveHistory) historyStack.push(content.innerHTML);
   content.innerHTML = html;
 }
 
-// Go Home
-function goHome() { setContent("<h2 style='padding:20px'>Welcome</h2><p style='padding:20px'>Select an option from the menu.</p>"); }
+// Home page
+function goHome() { 
+  setContent(`
+    <div style="text-align:center; margin-top:100px;">
+      <h2 style="font-size:28px; margin-bottom:10px;">Welcome To</h2>
+      <h1 style="font-size:48px; color:#1abc9c; letter-spacing:3px;">LASER MATRIX</h1>
+    </div>
+  `); 
+}
+
 function openForms() { setContent("<h2 style='padding:20px'>Forms</h2><p style='padding:20px'>Forms functionality will go here.</p>"); }
 
-// Open Databases
 function openDatabases(page=1, searchTerm="") {
   dbPage = page;
   let allDBs = Object.keys(databases);
@@ -193,7 +208,6 @@ function openDatabases(page=1, searchTerm="") {
   `);
 }
 
-// Generate database list HTML
 function generateDbListHTML(dbs) {
   if(!dbs.length) return "<p>No databases found.</p>";
   return dbs.map(db => `
@@ -204,12 +218,8 @@ function generateDbListHTML(dbs) {
   `).join("");
 }
 
-// Search databases
-function searchDatabases(val) {
-  openDatabases(1, val);
-}
+function searchDatabases(val) { openDatabases(1, val); }
 
-// Show import form
 function showImportForm() {
   setContent(`
     <h2 style="padding:10px">Add Database</h2>
@@ -226,7 +236,6 @@ function showImportForm() {
   `);
 }
 
-// CSV Import
 function importCSV() {
   const fileInput = document.getElementById("csvFile");
   const statusBox = document.getElementById("statusBox");
@@ -259,7 +268,6 @@ function importCSV() {
   });
 }
 
-// Google Sheet Import
 function importGoogleSheet() {
   const url = document.getElementById("sheetUrl").value.trim();
   if(!url) return;
@@ -268,7 +276,6 @@ function importGoogleSheet() {
   saveDatabases(); openDatabases();
 }
 
-// Open database table
 async function openDatabase(dbName, page=1){
   const db = databases[dbName];
   if(db.type==="gsheet"){
@@ -312,13 +319,11 @@ async function openDatabase(dbName, page=1){
   setContent(`<h2 style="padding:10px">${dbName}</h2>${tableHTML}`, false);
 }
 
-// Manual page jump
 function jumpToPage(dbName, val){
   const page = parseInt(val);
   if(!isNaN(page) && page>0) openDatabase(dbName, page);
 }
 
-// Popup menu
 function showMenu(e, dbName){
   e.stopPropagation();
   currentPopupDB=dbName;
@@ -330,7 +335,6 @@ function showMenu(e, dbName){
 }
 document.addEventListener("click",()=>{document.getElementById("popupMenu").style.display="none";});
 
-// Rename and Delete
 function renameDatabase(){ 
   const newName=prompt("Enter new name:",currentPopupDB);
   if(newName && !databases[newName]){

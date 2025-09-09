@@ -85,7 +85,7 @@
       margin-bottom:8px;
     }
 
-    /* LASER MATRIX strong 3D with gradient */
+    /* LASER MATRIX light blue → light red gradient 3D */
     .three-d {
       display:inline-block;
       line-height:1;
@@ -98,21 +98,16 @@
       background-clip:text;
       color:transparent;
       font-size:56px;
-      -webkit-text-stroke: 1px rgba(10,10,10,0.15);
-      /* stronger extrusion shadow layers for deeper 3D */
+      -webkit-text-stroke: 1px rgba(10,10,10,0.12);
       text-shadow:
         0 1px 0 rgba(0,0,0,0.15),
         0 2px 0 rgba(0,0,0,0.12),
         0 3px 0 rgba(0,0,0,0.10),
-        0 4px 0 rgba(0,0,0,0.08),
-        0 5px 0 rgba(0,0,0,0.06),
-        0 6px 0 rgba(0,0,0,0.05),
-        0 7px 12px rgba(0,0,0,0.4);
+        0 4px 10px rgba(0,0,0,0.35);
       transform-origin:center top;
-      transform: translateZ(50px) rotateX(8deg);
+      transform: translateZ(40px) rotateX(6deg);
       display:block;
       margin:0 auto;
-      position:relative;
     }
 
     .three-d::after{
@@ -120,9 +115,9 @@
       position:absolute;
       left:0; top:0;
       z-index:-1;
-      color:rgba(0,0,0,0.2);
-      transform: translate(10px,16px) skewX(-6deg) scaleY(1);
-      filter:blur(0.7px);
+      color:rgba(0,0,0,0.15);
+      transform: translate(8px,14px) skewX(-6deg) scaleY(1);
+      filter:blur(0.5px);
       -webkit-mask-image: linear-gradient(#000, transparent);
       pointer-events:none;
     }
@@ -335,4 +330,74 @@
         db.headers = parsed.meta.fields.map(f=>({name:f,type:'Text'}));
         db.rows = parsed.data.map(row => db.headers.map(h => row[h.name] || ''));
         databases[dbName] = db;
-        localStorage
+        localStorage.setItem('databases', JSON.stringify(databases));
+      }catch(e){ console.warn('gsheet fetch failed', e); }
+    }
+
+    const rowsPerPage = 100;
+    const start = (page-1)*rowsPerPage;
+    const end = start + rowsPerPage;
+    const totalPages = Math.max(1, Math.ceil((db.rows||[]).length / rowsPerPage));
+
+    const tableHtml = `
+      <div style="font-weight:700;margin-bottom:12px">${escapeHtml(dbName)}</div>
+      <div class="table-wrap">
+        <div style="overflow:auto;max-height:420px">
+          <table>
+            <thead><tr>${(db.headers||[]).map(h => `<th>${escapeHtml(h.name)}</th>`).join('')}</tr></thead>
+            <tbody>
+              ${(db.rows||[]).slice(start,end).map(r => `<tr>${r.map(c => `<td>${escapeHtml(String(c||''))}</td>`).join('')}</tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+        <div class="pagination">
+          <button class="btn" onclick="openDatabase('${escapeJs(dbName)}',${page-1})" ${page===1? 'disabled':''}>⬅ Prev</button>
+          <span style="margin:0 8px">Page ${page} of ${totalPages}</span>
+          <button class="btn" onclick="openDatabase('${escapeJs(dbName)}',${page+1})" ${page===totalPages? 'disabled':''}>Next ➡</button>
+          <div style="margin-top:10px">Go to page: <input type="number" min="1" max="${totalPages}" value="${page}" onchange="jumpToPage('${escapeJs(dbName)}', this.value)"></div>
+        </div>
+      </div>
+    `;
+
+    panelArea.style.display = 'block';
+    hero.innerHTML = '';
+    panelArea.innerHTML = tableHtml;
+  }
+  function jumpToPage(dbName,val){ const p = parseInt(val); if(p>0) openDatabase(dbName,p); }
+
+  function showMenu(ev, dbName){
+    ev.stopPropagation();
+    currentPopupDB = dbName;
+    const menu = document.getElementById('popupMenu');
+    menu.style.display='block';
+    menu.style.left = (ev.clientX - 10) + 'px';
+    menu.style.top  = (ev.clientY + 6) + 'px';
+  }
+  document.addEventListener('click', ()=> document.getElementById('popupMenu').style.display='none');
+
+  function renameDatabase(){
+    const newName = prompt('Enter new name for database', currentPopupDB);
+    if(!newName) return;
+    if(databases[newName]){ alert('Name already exists'); return; }
+    databases[newName] = databases[currentPopupDB];
+    delete databases[currentPopupDB];
+    localStorage.setItem('databases', JSON.stringify(databases));
+    updateDbCount();
+    openDatabases();
+  }
+  function deleteDatabase(){
+    if(!confirm('Delete database "'+currentPopupDB+'" ?')) return;
+    delete databases[currentPopupDB];
+    localStorage.setItem('databases', JSON.stringify(databases));
+    updateDbCount();
+    openDatabases();
+  }
+
+  function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function escapeJs(s){ return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'\\"'); }
+
+  goHome();
+  updateDbCount();
+</script>
+</body>
+</html>

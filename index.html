@@ -238,7 +238,7 @@
       <div class="db-header">
         <div style="display:flex;align-items:center;gap:12px">
           <input id="dbSearchInput" placeholder="Search databases..." value="${escapeHtml(searchTerm)}" oninput="searchDatabases(this.value)">
-          <div style="font-size:13px;color:#666">Total: ${total}</div>
+          <div style="font-size:13px; color:#666; text-transform: uppercase; font-weight: bold;">Total: ${total}</div>
         </div>
         <div>
           <button class="btn" onclick="showImportForm()">➕ Add Database</button>

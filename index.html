@@ -187,13 +187,22 @@
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1), inset 0 -2px 0 rgba(0, 0, 0, 0.2);
         transform: translateY(1px);
     }
-    /* Style for the new filter inputs */
     .filter-input {
         width: 100%;
         padding: 4px;
         box-sizing: border-box;
         border: 1px solid #ccc;
         border-radius: 4px;
+    }
+    /* Style for the new filter icon */
+    .filter-icon {
+        cursor: pointer;
+        font-size: 12px;
+        margin-left: 8px;
+        color: #555;
+    }
+    .filter-icon:hover {
+        color: #000;
     }
   </style>
 </head>
@@ -368,11 +377,17 @@
     openDatabases();
   }
 
-  // NEW FUNCTION TO FILTER THE DATA TABLE
+  // NEW FUNCTION TO TOGGLE THE FILTER ROW'S VISIBILITY
+  function toggleFilterRow() {
+    const filterRow = document.getElementById('filter-row');
+    if (filterRow) {
+        filterRow.style.display = filterRow.style.display === 'none' ? 'table-row' : 'none';
+    }
+  }
+
   function filterTable() {
     const filters = [];
-    const headerRow = document.getElementById('data-table-header');
-    headerRow.querySelectorAll('.filter-input').forEach((input, index) => {
+    document.querySelectorAll('.filter-input').forEach((input, index) => {
         filters.push({ index: index, value: input.value.toLowerCase() });
     });
 
@@ -406,8 +421,9 @@
     const end = start + rowsPerPage;
     const totalPages = Math.max(1, Math.ceil((db.rows||[]).length / rowsPerPage));
     
-    // Create header rows with filter inputs
-    const headerHtml = (db.headers||[]).map(h => `<th>${escapeHtml(h.name)}</th>`).join('');
+    // Create header row with filter icons
+    const headerHtml = (db.headers||[]).map(h => `<th>${escapeHtml(h.name)} <span class="filter-icon" onclick="toggleFilterRow()">&#9660;</span></th>`).join('');
+    // Create the hidden row with filter inputs
     const filterHtml = (db.headers||[]).map((h, i) => `<th><input type="text" class="filter-input" onkeyup="filterTable()" placeholder="Filter..."></th>`).join('');
 
     const tableHtml = `
@@ -418,9 +434,9 @@
       <div class="table-wrap">
         <div style="overflow:auto; max-height:75vh;">
           <table id="data-table">
-            <thead id="data-table-header">
+            <thead>
                 <tr>${headerHtml}</tr>
-                <tr>${filterHtml}</tr>
+                <tr id="filter-row" style="display: none;">${filterHtml}</tr>
             </thead>
             <tbody id="data-table-body">
               ${(db.rows||[]).slice(start,end).map(r => `<tr>${r.map(c => `<td>${escapeHtml(String(c||''))}</td>`).join('')}</tr>`).join('')}

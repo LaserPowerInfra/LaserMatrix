@@ -22,7 +22,7 @@
     .sidebar{
       width:var(--sidebar-w);
       min-width:var(--sidebar-w);
-      background: blue; /* CHANGED TO BLUE */
+      background: #add8e6; /* CHANGED TO LIGHT BLUE */
       color:#fff;
       padding:18px;
       box-sizing:border-box;
@@ -31,14 +31,21 @@
       gap:8px;
       flex-shrink:0;
     }
-    .sidebar h2{margin:0 0 8px 0;text-align:center;color:var(--accent);font-size:18px}
+    .sidebar h2{margin:0 0 8px 0;text-align:center;color: #34495e; /* Adjusted for light background */ font-size:18px}
     .sidebar button{
       display:flex;align-items:center;gap:10px;
-      background: red; /* CHANGED TO RED */
+      background: #ff6666; /* CHANGED TO LIGHT RED */
       color:#fff;border:0;padding:10px;border-radius:8px;cursor:pointer;
       font-size:15px;text-align:left;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), inset 0 -3px 0 rgba(0, 0, 0, 0.2); /* Added 3D effect */
+      transition: all 0.2s ease; /* Smooth transition for hover */
     }
-    .sidebar button:hover{background:var(--accent); color:#063; box-shadow:0 6px 18px rgba(26,188,156,0.12);}
+    .sidebar button:hover{
+      background: #e65c5c; /* Slightly darker red on hover */
+      color:#fff;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1), inset 0 -2px 0 rgba(0, 0, 0, 0.2); /* Adjusted shadow on hover */
+      transform: translateY(1px); /* Slight press effect on hover */
+    }
     .sidebar .spacer{flex-grow:1}
 
     /* Main content area (fills remaining width) */

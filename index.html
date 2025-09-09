@@ -41,34 +41,35 @@
     }
     .sidebar button:hover { background:#1abc9c; }
 
-    /* Main area */
-    .content { flex-grow:1; display:flex; flex-direction:column; overflow:auto; background:#fff; }
-
-    /* Home page layout */
-    .home-container {
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
+    /* Content area (full video background) */
+    .main-content {
+      flex-grow:1;
+      position:relative;
+      overflow:hidden;
+    }
+    .main-content video {
+      width:100%;
       height:100%;
-      padding:40px;
+      object-fit:cover;
     }
-    .home-text {
-      flex:1;
+    .overlay-text {
+      position:absolute;
+      top:20%;
+      left:50%;
+      transform:translateX(-50%);
+      text-align:center;
+      color:white;
+      text-shadow:0 2px 6px rgba(0,0,0,0.6);
     }
-    .home-text h2 { font-size:28px; margin:0; }
-    .home-text h1 { font-size:48px; color:#1abc9c; margin:10px 0 0; letter-spacing:3px; }
-
-    .home-video {
-      flex:1;
-      display:flex;
-      justify-content:center;
-      align-items:center;
+    .overlay-text h2 {
+      font-size:36px;
+      margin:0;
     }
-    .home-video video {
-      max-width:100%;
-      max-height:70vh;
-      border-radius:10px;
-      box-shadow:0 2px 8px rgba(0,0,0,0.2);
+    .overlay-text h1 {
+      font-size:64px;
+      margin:10px 0;
+      letter-spacing:4px;
+      color:#1abc9c;
     }
 
     /* Database page fixed header */
@@ -86,11 +87,6 @@
     }
     .db-header button:hover { background:#2980b9; }
 
-    /* Database list scroll */
-    #dbListContainer {
-      overflow-y:auto; flex-grow:1; padding:10px;
-    }
-
     .db-item {
       display:flex; align-items:center;
       border:1px solid #ccc; margin:5px 0; padding:5px;
@@ -99,12 +95,10 @@
     .db-menu { cursor:pointer; padding:0 8px; }
     .db-left { flex-grow:1; cursor:pointer; padding-left:8px; text-align:left; }
 
-    /* Table */
-    table { border-collapse:collapse; width:100%; font-size:14px; }
+    table { border-collapse:collapse; width:100%; font-size:14px; background:#fff; }
     th, td { border:1px solid #ccc; padding:6px; }
     th { background:#f4f4f4; position:sticky; top:0; z-index:1; }
 
-    /* Popup menu */
     #popupMenu {
       position:absolute;
       display:none;
@@ -118,8 +112,7 @@
     .menu-item:hover { background:#f0f0f0; }
     .menu-item:active { background:#d0d0d0; }
 
-    /* Pagination */
-    .pagination { text-align:center; padding:10px; }
+    .pagination { text-align:center; padding:10px; background:#fff; }
     .pagination button { padding:6px 12px; margin:0 4px; }
     .pagination input { width:50px; text-align:center; }
   </style>
@@ -134,8 +127,8 @@
     <button onclick="openForms()">📝 Forms</button>
   </div>
 
-  <!-- Main content -->
-  <div id="content" class="content"></div>
+  <!-- Content -->
+  <div id="content" class="main-content"></div>
 
   <!-- Popup menu -->
   <div id="popupMenu">
@@ -146,33 +139,32 @@
 <script>
 let databases = JSON.parse(localStorage.getItem("databases") || "{}");
 let currentPopupDB = null;
+let historyStack = [];
 let dbPage = 1;   
 const dbPerPage = 10; 
 
 function saveDatabases() { localStorage.setItem("databases", JSON.stringify(databases)); }
 
-function setContent(html) {
-  document.getElementById("content").innerHTML = html;
+function setContent(html, saveHistory=true) {
+  const content = document.getElementById("content");
+  if(saveHistory) historyStack.push(content.innerHTML);
+  content.innerHTML = html;
 }
 
-// Home page
+// Home page with video background
 function goHome() { 
   setContent(`
-    <div class="home-container">
-      <div class="home-text">
-        <h2>Welcome To</h2>
-        <h1>LASER MATRIX</h1>
-      </div>
-      <div class="home-video">
-        <video autoplay muted loop>
-          <source src="https://laserpowerinfra.com/frontassets/img/slider/Banner_v04_HD_L.mp4" type="video/mp4">
-        </video>
-      </div>
+    <video autoplay muted loop>
+      <source src="https://laserpowerinfra.com/frontassets/img/slider/Banner_v04_HD_L.mp4" type="video/mp4">
+    </video>
+    <div class="overlay-text">
+      <h2>Welcome To</h2>
+      <h1>LASER MATRIX</h1>
     </div>
   `); 
 }
 
-function openForms() { setContent("<h2 style='padding:20px'>Forms</h2><p style='padding:20px'>Forms functionality will go here.</p>"); }
+function openForms() { setContent("<h2 style='padding:20px; background:#fff;'>Forms functionality will go here.</h2>"); }
 
 function openDatabases(page=1, searchTerm="") {
   dbPage = page;
@@ -207,7 +199,7 @@ function openDatabases(page=1, searchTerm="") {
 }
 
 function generateDbListHTML(dbs) {
-  if(!dbs.length) return "<p>No databases found.</p>";
+  if(!dbs.length) return "<p style='background:#fff;'>No databases found.</p>";
   return dbs.map(db => `
     <div class="db-item">
       <div class="db-menu" onclick="showMenu(event, '${db}')">⋮</div>
@@ -220,17 +212,19 @@ function searchDatabases(val) { openDatabases(1, val); }
 
 function showImportForm() {
   setContent(`
-    <h2 style="padding:10px">Add Database</h2>
-    <h3>📂 From CSV</h3>
-    <input type="file" id="csvFile" accept=".csv">
-    <button onclick="importCSV()">Upload</button>
-    <div id="statusBox"></div>
-    <div id="errorBox"></div>
+    <div style="background:#fff; padding:20px;">
+      <h2>Add Database</h2>
+      <h3>📂 From CSV</h3>
+      <input type="file" id="csvFile" accept=".csv">
+      <button onclick="importCSV()">Upload</button>
+      <div id="statusBox"></div>
+      <div id="errorBox"></div>
 
-    <h3>🌍 From Google Sheet</h3>
-    <input type="text" id="sheetUrl" placeholder="Paste Google Sheet link here" size="60">
-    <button onclick="importGoogleSheet()">Add</button>
-    <div id="sheetStatus"></div>
+      <h3>🌍 From Google Sheet</h3>
+      <input type="text" id="sheetUrl" placeholder="Paste Google Sheet link here" size="60">
+      <button onclick="importGoogleSheet()">Add</button>
+      <div id="sheetStatus"></div>
+    </div>
   `);
 }
 
@@ -296,7 +290,7 @@ async function openDatabase(dbName, page=1){
   const totalPages = Math.ceil(db.rows.length/rowsPerPage);
 
   let tableHTML = `
-    <div style="overflow-x:auto; overflow-y:auto; max-height:70vh; border:1px solid #ccc; border-radius:4px; display:block;">
+    <div style="overflow-x:auto; overflow-y:auto; max-height:70vh; border:1px solid #ccc; border-radius:4px; display:block; background:#fff;">
       <table>
         <thead>
           <tr>${db.headers.map(h=>`<th>${h.name}</th>`).join("")}</tr>
@@ -306,7 +300,7 @@ async function openDatabase(dbName, page=1){
         </tbody>
       </table>
     </div>
-    <div style="margin-top:10px; text-align:center;">
+    <div style="margin-top:10px; text-align:center; background:#fff;">
       <button onclick="openDatabase('${dbName}',${page-1})" ${page===1?"disabled":""}>⬅ Prev</button>
       <span> Page ${page} of ${totalPages} </span>
       <button onclick="openDatabase('${dbName}',${page+1})" ${page===totalPages?"disabled":""}>Next ➡</button>
@@ -314,7 +308,7 @@ async function openDatabase(dbName, page=1){
       <label>Go to page: <input type="number" id="manualPage" min="1" max="${totalPages}" value="${page}" onchange="jumpToPage('${dbName}', this.value)"></label>
     </div>
   `;
-  setContent(`<h2 style="padding:10px">${dbName}</h2>${tableHTML}`);
+  setContent(`<div style="background:#fff; padding:10px;"><h2>${dbName}</h2>${tableHTML}</div>`, false);
 }
 
 function jumpToPage(dbName, val){

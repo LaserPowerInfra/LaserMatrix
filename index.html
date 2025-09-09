@@ -137,7 +137,7 @@
       height:calc(100vh - 40px);
     }
 
-    /* db list & table styling (kept from previous design) */
+    /* db list & table styling */
     .db-header { background:#fff;padding:10px;border-bottom:1px solid #e3e7ea;display:flex;align-items:center;justify-content:space-between;gap:12px; }
     .db-header input{padding:8px;border-radius:6px;border:1px solid #d6dbe0;width:220px}
     .db-item{display:flex;align-items:center;background:#fff;padding:8px;border-radius:6px;margin:8px 0;border:1px solid #e6ebee}
@@ -147,8 +147,31 @@
     th,td{border:1px solid #e6ebee;padding:8px;text-align:left;font-size:13px}
     th{background:#f4f6f8;position:sticky;top:0}
     .pagination{margin-top:12px;text-align:center}
-    .btn{background:var(--muted);color:#fff;padding:8px 12px;border-radius:6px;border:0;cursor:pointer}
-    .btn:hover{background:var(--accent)}
+    
+    /* MODIFIED .btn STYLE TO MATCH SIDEBAR BUTTONS */
+    .btn{
+      background: #ff6666;
+      color:#fff;
+      padding:8px 12px;
+      border-radius:8px;
+      border:0;
+      cursor:pointer;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), inset 0 -3px 0 rgba(0, 0, 0, 0.2);
+      transition: all 0.2s ease;
+    }
+    .btn:hover{
+      background: #e65c5c;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1), inset 0 -2px 0 rgba(0, 0, 0, 0.2);
+      transform: translateY(1px);
+    }
+    .btn:disabled{
+      background: #cccccc;
+      color: #888888;
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+    }
+
     .btn-clear {
         background: #ff6666;
         color: white;
@@ -157,9 +180,13 @@
         border-radius: 6px;
         cursor: pointer;
         font-size: 14px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), inset 0 -3px 0 rgba(0, 0, 0, 0.2);
+        transition: all 0.2s ease;
     }
     .btn-clear:hover {
         background: #e65c5c;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1), inset 0 -2px 0 rgba(0, 0, 0, 0.2);
+        transform: translateY(1px);
     }
   </style>
 </head>
@@ -288,12 +315,12 @@
           <label><strong>From CSV</strong></label><br>
           <input type="file" id="csvFile" accept=".csv">
           <button class="btn" style="margin-left:8px" onclick="importCSV()">Upload</button>
-          <div id="statusBox" style="margin-top:8px"></div>
         </div>
         <div>
           <label><strong>From Google Sheet</strong></label><br>
           <input type="text" id="sheetUrl" placeholder="Paste Google Sheet link here" style="width:60%">
           <button class="btn" onclick="importGoogleSheet()">Add</button>
+          <div id="statusBox" style="margin-top:8px"></div>
         </div>
       </div>
     `;
@@ -317,7 +344,6 @@
           rows: rows.map(r => fields.map(f => r[f] || ''))
         };
         localStorage.setItem('databases', JSON.stringify(databases));
-        status.textContent = `✅ Imported ${rows.length} rows as "${dbName}"`;
         openDatabases();
       },
       error(err){

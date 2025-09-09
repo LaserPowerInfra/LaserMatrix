@@ -1,451 +1,156 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="utf-8" />
-  <title>Laser Matrix — 3D Header + Video Background</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="UTF-8">
+  <title>Laser Matrix</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-
   <style>
-    :root{
-      --sidebar-w:220px;
-      --accent:#1abc9c;
-      --dark:#2c3e50;
-      --muted:#34495e;
-    }
+    body { margin:0; font-family: Arial, sans-serif; display:flex; height:100vh; overflow:hidden; }
 
-    /* Page layout */
-    html,body{height:100%;margin:0;font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;}
-    body{display:flex;overflow:hidden;background:#f2f4f6;color:#222;}
-
-    /* Sidebar (fixed on left) */
-    .sidebar{
-      width:var(--sidebar-w);
-      min-width:var(--sidebar-w);
-      background:var(--dark);
-      color:#fff;
-      padding:18px;
-      box-sizing:border-box;
+    /* Sidebar */
+    .sidebar {
+      width: 220px;
+      background: #2c3e50;
+      color: white;
+      padding: 15px;
+      box-sizing: border-box;
+      flex-shrink: 0;
       display:flex;
       flex-direction:column;
-      gap:8px;
-      flex-shrink:0;
     }
-    .sidebar h2{margin:0 0 8px 0;text-align:center;color:var(--accent);font-size:18px}
-    .sidebar button{
-      display:flex;align-items:center;gap:10px;
-      background:var(--muted);color:#fff;border:0;padding:10px;border-radius:8px;cursor:pointer;
-      font-size:15px;text-align:left;
-    }
-    .sidebar button:hover{background:var(--accent); color:#063; box-shadow:0 6px 18px rgba(26,188,156,0.12);}
-    .sidebar .spacer{flex-grow:1}
-    .sidebar .count{background:rgba(255,255,255,0.06);padding:8px;border-radius:6px;text-align:center;font-size:13px}
-
-    /* Main content area (fills remaining width) */
-    .main {
-      flex:1;
-      position:relative;
-      overflow:hidden;
-      display:flex;
-      flex-direction:column;
-      background:#fff;
-    }
-
-    /* Top area used for overlay text + video background */
-    .hero {
-      position:relative;
-      flex:1 0 auto;
-      min-height:360px;
-      /* perspective for 3D effect on text */
-      perspective:1200px;
-      overflow:hidden;
-      background:#000;
-    }
-
-    /* video fills hero */
-    .hero video{
-      position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
-      -webkit-filter:brightness(0.7) saturate(1.05);filter:brightness(0.7) saturate(1.05);
-    }
-
-    /* overlay container for top text (stays at top) */
-    .hero .overlay-top{
-      position:absolute;
-      top:28px; /* near the top as requested */
-      left:50%;
-      transform:translateX(-50%);
-      width:calc(100% - var(--sidebar-w) - 60px);
-      max-width:1200px;
-      pointer-events:none; /* click-through so buttons underneath still work if any */
+    .sidebar h2 {
       text-align:center;
-      z-index:5;
-    }
-
-    /* 3D styled heading */
-    .three-d {
-      display:inline-block;
-      line-height:1;
-      font-weight:900;
-      letter-spacing:2px;
-      text-transform:uppercase;
-      font-family: "Poppins", "Montserrat", Arial, sans-serif;
-      /* gradient fill */
-      background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(220,255,240,0.9) 40%, rgba(26,188,156,0.95));
-      -webkit-background-clip:text;
-      background-clip:text;
-      color:transparent;
-      font-size:56px; /* large */
-      -webkit-text-stroke: 1px rgba(10,10,10,0.12);
-      /* create depth using stacked text-shadow for extrusion */
-      text-shadow:
-        0 1px 0 rgba(0,0,0,0.15),
-        0 2px 0 rgba(0,0,0,0.12),
-        0 3px 0 rgba(0,0,0,0.10),
-        0 4px 10px rgba(0,0,0,0.35);
-      transform-origin:center top;
-      /* subtle 3d tilt */
-      transform: translateZ(40px) rotateX(6deg);
-      display:block;
-      margin:0 auto;
-    }
-
-    /* small subtitle (WELCOME TO) above main 3D title */
-    .sub-title{
-      display:block;
-      font-weight:700;
-      letter-spacing:2px;
-      color:rgba(255,255,255,0.95);
-      text-shadow:0 2px 6px rgba(0,0,0,0.5);
+      margin:10px 0 20px 0;
       font-size:20px;
-      margin-bottom:8px;
+      color:#1abc9c;
     }
+    .sidebar button {
+      width:100%;
+      padding:12px;
+      margin:6px 0;
+      border:none;
+      background:#34495e;
+      color:white;
+      cursor:pointer;
+      border-radius:6px;
+      text-align:left;
+      font-size:15px;
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    .sidebar button:hover { background:#1abc9c; }
 
-    /* "extrude" pseudo-layer for stronger 3D feel using pseudo-element */
-    .three-d::after{
-      content:attr(data-text);
+    /* Content area with video */
+    .content { flex-grow:1; display:flex; flex-direction:column; position:relative; overflow:hidden; }
+
+    .video-background {
       position:absolute;
-      left:0; top:0;
-      z-index:-1;
-      color:rgba(0,0,0,0.15);
-      transform: translate(8px,14px) skewX(-6deg) scaleY(1);
-      filter:blur(0.5px);
-      -webkit-mask-image: linear-gradient(#000, transparent);
-      pointer-events:none;
+      top:0; left:0;
+      width:100%; height:100%;
+      overflow:hidden;
+      z-index:0;
+    }
+    .video-background video {
+      width:100%;
+      height:100%;
+      object-fit:cover;
     }
 
-    /* responsive adjustments */
-    @media (max-width:1000px){
-      .three-d{font-size:40px}
-      .hero .overlay-top{top:20px}
+    /* Overlay text */
+    .overlay-text {
+      position:absolute;
+      top:50px;
+      width:100%;
+      text-align:center;
+      z-index:1;
     }
-    @media (max-width:700px){
-      .three-d{font-size:28px}
-      .sub-title{font-size:14px}
-      .hero{min-height:320px}
+    .overlay-text h1 {
+      margin:0;
+      text-transform:uppercase;
+      font-weight:bold;
+      text-shadow: 2px 2px 6px rgba(0,0,0,0.7), 4px 4px 12px rgba(0,0,0,0.5);
+    }
+    .overlay-text .welcome {
+      font-size:50px;
+      color: #fff;
+      letter-spacing:3px;
+      text-shadow: 0 0 10px #ffffff, 0 0 20px #cccccc, 0 0 30px #999999;
+      animation: glowWhite 2s infinite alternate;
+    }
+    .overlay-text .laser-matrix {
+      font-size:70px;
+      background: linear-gradient(45deg, #00c3ff, #ff5f6d);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing:5px;
+      text-shadow: 0 0 15px rgba(0,195,255,0.7), 0 0 25px rgba(255,95,109,0.7);
+      animation: glowColor 2s infinite alternate;
     }
 
-    /* Content below hero (databases/forms area) */
-    .panel {
-      background:#f7f8fa;
-      padding:18px;
+    /* Glow animations */
+    @keyframes glowWhite {
+      from { text-shadow: 0 0 5px #fff, 0 0 10px #aaa; }
+      to { text-shadow: 0 0 15px #fff, 0 0 30px #ddd; }
+    }
+    @keyframes glowColor {
+      from { text-shadow: 0 0 10px rgba(0,195,255,0.7), 0 0 20px rgba(255,95,109,0.7); }
+      to { text-shadow: 0 0 25px rgba(0,195,255,1), 0 0 40px rgba(255,95,109,1); }
+    }
+
+    /* Inner dynamic area */
+    .main-content {
+      flex-grow:1;
+      padding:20px;
       overflow:auto;
-      height:360px; /* when opened DB, content will show here (you can adjust) */
+      background:rgba(255,255,255,0.85);
+      z-index:1;
+      margin-top:180px; /* leave space for header text */
     }
-
-    /* db list & table styling (kept from previous design) */
-    .db-header { background:#fff;padding:10px;border-bottom:1px solid #e3e7ea;display:flex;align-items:center;justify-content:space-between;gap:12px; }
-    .db-header input{padding:8px;border-radius:6px;border:1px solid #d6dbe0;width:220px}
-    .db-item{display:flex;align-items:center;background:#fff;padding:8px;border-radius:6px;margin:8px 0;border:1px solid #e6ebee}
-    .db-list{max-height:260px;overflow:auto;padding:10px}
-    .table-wrap{background:#fff;padding:12px;border-radius:8px;border:1px solid #e6ebee}
-    table{width:100%;border-collapse:collapse}
-    th,td{border:1px solid #e6ebee;padding:8px;text-align:left;font-size:13px}
-    th{background:#f4f6f8;position:sticky;top:0}
-    .pagination{margin-top:12px;text-align:center}
-    .btn{background:var(--muted);color:#fff;padding:8px 12px;border-radius:6px;border:0;cursor:pointer}
-    .btn:hover{background:var(--accent)}
   </style>
 </head>
-<body>
+<body onload="goHome()">
 
   <!-- Sidebar -->
-  <aside class="sidebar" role="navigation" aria-label="Main menu">
+  <div class="sidebar">
     <h2>📂 Menu</h2>
     <button onclick="goHome()">🏠 Home</button>
     <button onclick="openDatabases()">📊 Databases</button>
     <button onclick="openForms()">📝 Forms</button>
-    <div class="spacer"></div>
-    <div class="count" id="dbCount">0 Databases</div>
-  </aside>
+  </div>
 
-  <!-- Main area -->
-  <main class="main" id="main">
-    <!-- Hero: video background + overlay text (top) -->
-    <section class="hero" id="hero">
-      <!-- video inserted dynamically by goHome() to allow switching between views -->
-    </section>
+  <!-- Content with video -->
+  <div class="content">
+    <div class="video-background">
+      <video autoplay muted loop>
+        <source src="https://laserpowerinfra.com/frontassets/img/slider/Banner_v04_HD_L.mp4" type="video/mp4">
+      </video>
+    </div>
 
-    <!-- Below hero area for panels (databases / forms etc.) -->
-    <section id="panelArea" class="panel" aria-live="polite" style="display:none;">
-      <!-- content injected by JS (db list, tables etc.) -->
-    </section>
-  </main>
+    <!-- Overlay text -->
+    <div class="overlay-text">
+      <h1 class="welcome">WELCOME TO</h1>
+      <h1 class="laser-matrix">LASER MATRIX</h1>
+    </div>
 
-  <!-- popup menu (for db items) -->
-  <div id="popupMenu" style="position:absolute;display:none;background:#fff;border:1px solid #ddd;border-radius:6px;box-shadow:0 6px 20px rgba(0,0,0,0.12);min-width:140px;z-index:30">
-    <div style="padding:8px;cursor:pointer" onclick="renameDatabase()">📝 Rename</div>
-    <div style="padding:8px;cursor:pointer" onclick="deleteDatabase()">🗑 Delete</div>
+    <!-- Main content -->
+    <div id="content" class="main-content"></div>
   </div>
 
 <script>
-  // --- data & helpers ---
-  let databases = JSON.parse(localStorage.getItem("databases") || "{}");
-  const dbCountElem = document.getElementById('dbCount');
-  const hero = document.getElementById('hero');
-  const panelArea = document.getElementById('panelArea');
-
-  function updateDbCount(){
-    dbCountElem.textContent = Object.keys(databases).length + " Databases";
-  }
-  updateDbCount();
-
-  // slide-in HTML for overlay text at top with 3D appearance
-  function renderHeroOverlay(){
-    return `
-      <div class="overlay-top" aria-hidden="true">
-        <div class="sub-title">WELCOME TO</div>
-        <!-- data-text needed for ::after extrude layer -->
-        <div class="three-d" data-text="LASER MATRIX">LASER MATRIX</div>
-      </div>
-    `;
-  }
-
-  // --- views ---
-  function goHome(){
-    // hide panel area
-    panelArea.style.display = 'none';
-
-    // populate hero with video + overlay (video covers whole hero)
-    hero.innerHTML = `
-      <video autoplay muted loop playsinline>
-        <source src="https://laserpowerinfra.com/frontassets/img/slider/Banner_v04_HD_L.mp4" type="video/mp4">
-        Your browser does not support the video tag.
-      </video>
-      ${renderHeroOverlay()}
-    `;
-  }
-
-  function openForms(){
-    // remove hero video and overlay (or keep, but we hide hero)
-    hero.innerHTML = '';
-    panelArea.style.display = 'block';
-    panelArea.innerHTML = `<div style="font-weight:700;margin-bottom:10px">Forms</div>
-      <div style="background:#fff;padding:12px;border-radius:8px">Forms functionality will go here.</div>`;
-  }
-
-  // Database list page
-  let dbPage = 1, dbPerPage = 10, currentPopupDB = null;
-
-  function openDatabases(page=1, searchTerm=''){
-    // hide hero video (or keep hero but we will show panel below — per earlier requests we show DB in panel)
-    hero.innerHTML = ''; // hide hero when viewing DBs
-    panelArea.style.display = 'block';
-
-    const all = Object.keys(databases).filter(n => n.toLowerCase().includes((searchTerm||'').toLowerCase()));
-    const total = all.length;
-    const totalPages = Math.max(1, Math.ceil(total/dbPerPage));
-    page = Math.min(Math.max(1,page), totalPages);
-    dbPage = page;
-    const start = (page-1)*dbPerPage;
-    const slice = all.slice(start, start + dbPerPage);
-
-    // build db list html
-    let html = `
-      <div class="db-header">
-        <div style="display:flex;align-items:center;gap:12px">
-          <input id="dbSearchInput" placeholder="Search databases..." value="${escapeHtml(searchTerm)}" oninput="searchDatabases(this.value)">
-          <div style="font-size:13px;color:#666">Total: ${total}</div>
-        </div>
-        <div>
-          <button class="btn" onclick="showImportForm()">➕ Add Database</button>
-        </div>
-      </div>
-
-      <div class="db-list">
-        ${slice.length? slice.map(name => `
-            <div class="db-item">
-              <div style="margin-right:10px;cursor:pointer" onclick="showMenu(event, '${escapeJs(name)}')">⋮</div>
-              <div style="flex:1;cursor:pointer" onclick="openDatabase('${escapeJs(name)}')">📊 ${escapeHtml(name)}</div>
-            </div>
-          `).join('') : `<div style="padding:12px;background:#fff;border-radius:6px">No databases found.</div>`
-        }
-      </div>
-
-      <div class="pagination">
-        <button class="btn" onclick="openDatabases(${page-1}, document.getElementById('dbSearchInput')?.value||'')" ${page===1? 'disabled':''}>⬅ Prev</button>
-        <span style="margin:0 10px">Page ${page} of ${totalPages}</span>
-        <button class="btn" onclick="openDatabases(${page+1}, document.getElementById('dbSearchInput')?.value||'')" ${page===totalPages? 'disabled':''}>Next ➡</button>
-      </div>
-    `;
-
-    panelArea.innerHTML = html;
-  }
-
-  function searchDatabases(val){
-    openDatabases(1, val);
-  }
-
-  function showImportForm(){
-    hero.innerHTML = ''; // ensure hero hidden
-    panelArea.style.display = 'block';
-    panelArea.innerHTML = `
-      <div style="font-weight:700;margin-bottom:12px">Add Database</div>
-      <div style="background:#fff;padding:12px;border-radius:8px">
-        <div style="margin-bottom:12px">
-          <label><strong>From CSV</strong></label><br>
-          <input type="file" id="csvFile" accept=".csv">
-          <button class="btn" style="margin-left:8px" onclick="importCSV()">Upload</button>
-          <div id="statusBox" style="margin-top:8px"></div>
-        </div>
-        <div>
-          <label><strong>From Google Sheet</strong></label><br>
-          <input type="text" id="sheetUrl" placeholder="Paste Google Sheet link here" style="width:60%">
-          <button class="btn" onclick="importGoogleSheet()">Add</button>
-        </div>
-      </div>
-    `;
-  }
-
-  // CSV import
-  function importCSV(){
-    const fi = document.getElementById('csvFile');
-    const status = document.getElementById('statusBox');
-    status.textContent = '';
-    if(!fi || !fi.files || !fi.files.length){ status.textContent = '⚠️ Select a CSV file'; return; }
-    const file = fi.files[0];
-    const dbName = file.name.replace(/\.csv$/i,'') || ('csvdb_' + Date.now());
-    status.textContent = '⏳ Parsing...';
-    Papa.parse(file, {
-      header:true, skipEmptyLines:true, complete(res){
-        const fields = res.meta.fields || [];
-        const rows = res.data || [];
-        databases[dbName] = {
-          type:'csv',
-          headers: fields.map(h => ({name:h, type:'Text'})),
-          rows: rows.map(r => fields.map(f => r[f] || ''))
-        };
-        localStorage.setItem('databases', JSON.stringify(databases));
-        updateDbCount();
-        status.textContent = `✅ Imported ${rows.length} rows as "${dbName}"`;
-        openDatabases();
-      },
-      error(err){
-        status.textContent = '❌ Failed: ' + (err.message || 'parse error');
-      }
-    });
-  }
-
-  function importGoogleSheet(){
-    const url = document.getElementById('sheetUrl').value.trim();
-    if(!url){ alert('Paste Google Sheet url'); return; }
-    const name = 'GoogleSheetDB_' + Date.now();
-    databases[name] = { type:'gsheet', url:url, headers:[], rows:[] };
-    localStorage.setItem('databases', JSON.stringify(databases));
-    updateDbCount();
-    openDatabases();
-  }
-
-  // open database table view (in panelArea)
-  async function openDatabase(dbName, page=1){
-    const db = databases[dbName];
-    if(!db){ alert('DB not found'); return; }
-
-    // if gsheet, fetch live csv
-    if(db.type === 'gsheet' && db.url){
-      let csvUrl = db.url;
-      if(db.url.includes('/edit')) csvUrl = db.url.replace('/edit','/gviz/tq?tqx=out:csv');
-      else if(db.url.includes('output=csv')) csvUrl = db.url;
-      else if(db.url.includes('/pub')) csvUrl = db.url.includes('output=csv') ? db.url : db.url.replace('/pub','/pub?output=csv');
-      try{
-        const r = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(csvUrl));
-        const txt = await r.text();
-        const parsed = Papa.parse(txt, { header:true, skipEmptyLines:true });
-        db.headers = parsed.meta.fields.map(f=>({name:f,type:'Text'}));
-        db.rows = parsed.data.map(row => db.headers.map(h => row[h.name] || ''));
-        databases[dbName] = db;
-        localStorage.setItem('databases', JSON.stringify(databases));
-      }catch(e){
-        console.warn('gsheet fetch failed', e);
-      }
-    }
-
-    const rowsPerPage = 100;
-    const start = (page-1)*rowsPerPage;
-    const end = start + rowsPerPage;
-    const totalPages = Math.max(1, Math.ceil((db.rows||[]).length / rowsPerPage));
-
-    const tableHtml = `
-      <div style="font-weight:700;margin-bottom:12px">${escapeHtml(dbName)}</div>
-      <div class="table-wrap">
-        <div style="overflow:auto;max-height:420px">
-          <table>
-            <thead><tr>${(db.headers||[]).map(h => `<th>${escapeHtml(h.name)}</th>`).join('')}</tr></thead>
-            <tbody>
-              ${(db.rows||[]).slice(start,end).map(r => `<tr>${r.map(c => `<td>${escapeHtml(String(c||''))}</td>`).join('')}</tr>`).join('')}
-            </tbody>
-          </table>
-        </div>
-        <div class="pagination">
-          <button class="btn" onclick="openDatabase('${escapeJs(dbName)}',${page-1})" ${page===1? 'disabled':''}>⬅ Prev</button>
-          <span style="margin:0 8px">Page ${page} of ${totalPages}</span>
-          <button class="btn" onclick="openDatabase('${escapeJs(dbName)}',${page+1})" ${page===totalPages? 'disabled':''}>Next ➡</button>
-          <div style="margin-top:10px">Go to page: <input type="number" min="1" max="${totalPages}" value="${page}" onchange="jumpToPage('${escapeJs(dbName)}', this.value)"></div>
-        </div>
-      </div>
-    `;
-
-    panelArea.style.display = 'block';
-    hero.innerHTML = ''; // ensure hero hidden while showing DB
-    panelArea.innerHTML = tableHtml;
-  }
-  function jumpToPage(dbName,val){ const p = parseInt(val); if(p>0) openDatabase(dbName,p); }
-
-  // popup menu for rename/delete (positioning and actions)
-  function showMenu(ev, dbName){
-    ev.stopPropagation();
-    currentPopupDB = dbName;
-    const menu = document.getElementById('popupMenu');
-    menu.style.display='block';
-    menu.style.left = (ev.clientX - 10) + 'px';
-    menu.style.top  = (ev.clientY + 6) + 'px';
-  }
-  document.addEventListener('click', ()=> document.getElementById('popupMenu').style.display='none');
-
-  function renameDatabase(){
-    const newName = prompt('Enter new name for database', currentPopupDB);
-    if(!newName) return;
-    if(databases[newName]){ alert('Name already exists'); return; }
-    databases[newName] = databases[currentPopupDB];
-    delete databases[currentPopupDB];
-    localStorage.setItem('databases', JSON.stringify(databases));
-    updateDbCount();
-    openDatabases();
-  }
-  function deleteDatabase(){
-    if(!confirm('Delete database "'+currentPopupDB+'" ?')) return;
-    delete databases[currentPopupDB];
-    localStorage.setItem('databases', JSON.stringify(databases));
-    updateDbCount();
-    openDatabases();
-  }
-
-  // helpers to avoid XSS when injecting names
-  function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-  function escapeJs(s){ return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'\\"'); }
-
-  // initial view
-  goHome();
-  updateDbCount();
+let databases = JSON.parse(localStorage.getItem("databases") || "{}");
+function setContent(html) {
+  document.getElementById("content").innerHTML = html;
+}
+function goHome() {
+  setContent(`<h2 style="padding:20px">Home Content</h2>`);
+}
+function openDatabases() {
+  setContent(`<h2 style="padding:20px">Databases Page</h2>`);
+}
+function openForms() {
+  setContent(`<h2 style="padding:20px">Forms Page</h2>`);
+}
 </script>
 </body>
 </html>

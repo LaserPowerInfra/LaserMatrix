@@ -141,7 +141,7 @@
     .db-header { background:#fff;padding:10px;border-bottom:1px solid #e3e7ea;display:flex;align-items:center;justify-content:space-between;gap:12px; }
     .db-header input{padding:8px;border-radius:6px;border:1px solid #d6dbe0;width:220px}
     .db-item{display:flex;align-items:center;background:#fff;padding:8px;border-radius:6px;margin:8px 0;border:1px solid #e6ebee}
-    .db-list{max-height:260px;overflow:auto;padding:10px}
+    .db-list{max-height:320px;overflow:auto;padding:10px} /* Increased height slightly */
     .table-wrap{background:#fff;padding:12px;border-radius:8px;border:1px solid #e6ebee}
     table{width:100%;border-collapse:collapse}
     th,td{border:1px solid #e6ebee;padding:8px;text-align:left;font-size:13px}
@@ -191,6 +191,7 @@
   let databases = JSON.parse(localStorage.getItem("databases") || "{}");
   const hero = document.getElementById('hero');
   const panelArea = document.getElementById('panelArea');
+  let currentPopupDB = null;
 
   function renderHeroOverlay(){
     return `
@@ -221,37 +222,23 @@
       <div style="background:#fff;padding:12px;border-radius:8px">Forms functionality will go here.</div>`;
   }
 
-  let dbPage = 1, dbPerPage = 10, currentPopupDB = null;
-
-  // REFACTORED FUNCTION TO ONLY RENDER THE LIST + PAGINATION
-  function renderDbList(page = 1, searchTerm = ''){
+  // REFACTORED FUNCTION TO RENDER THE LIST (WITHOUT PAGINATION)
+  function renderDbList(searchTerm = ''){
     const all = Object.keys(databases).filter(n => n.toLowerCase().includes((searchTerm||'').toLowerCase()));
     const total = all.length;
-    const totalPages = Math.max(1, Math.ceil(total/dbPerPage));
-    page = Math.min(Math.max(1,page), totalPages);
-    dbPage = page;
-    const start = (page-1)*dbPerPage;
-    const slice = all.slice(start, start + dbPerPage);
 
-    const listHtml = slice.length ? slice.map(name => `
+    const listHtml = all.length ? all.map(name => `
         <div class="db-item">
             <div style="margin-right:10px;cursor:pointer" onclick="showMenu(event, '${escapeJs(name)}')">⋮</div>
             <div style="flex:1;cursor:pointer" onclick="openDatabase('${escapeJs(name)}')">📊 ${escapeHtml(name)}</div>
         </div>
     `).join('') : `<div style="padding:12px;background:#fff;border-radius:6px">No databases found.</div>`;
-
-    const paginationHtml = `
-        <button class="btn" onclick="renderDbList(${page-1}, document.getElementById('dbSearchInput')?.value||'')" ${page===1? 'disabled':''}>⬅ Prev</button>
-        <span style="margin:0 10px">Page ${page} of ${totalPages}</span>
-        <button class="btn" onclick="renderDbList(${page+1}, document.getElementById('dbSearchInput')?.value||'')" ${page===totalPages? 'disabled':''}>Next ➡</button>
-    `;
-
-    document.getElementById('db-list-container').innerHTML = `<div class="db-list">${listHtml}</div>`;
-    document.getElementById('db-pagination-container').innerHTML = `<div class="pagination">${paginationHtml}</div>`;
     
-    // Also update total count
+    document.getElementById('db-list-container').innerHTML = `<div class="db-list">${listHtml}</div>`;
+    
+    // Update total count text
     const totalElem = document.getElementById('db-total-count');
-    if(totalElem) totalElem.textContent = `Total Databases: ${total}`;
+    if(totalElem) totalElem.textContent = `Total Count: ${total}`;
   }
 
   // THIS FUNCTION NOW ONLY SETS UP THE DATABASE VIEW'S STRUCTURE
@@ -276,18 +263,17 @@
       </div>
       
       <div id="db-list-container"></div>
-      <div id="db-pagination-container"></div>
-    `;
+      `;
 
     panelArea.innerHTML = structureHtml;
 
     // Attach the event listener for the search input here
     document.getElementById('dbSearchInput').addEventListener('input', (e) => {
-        renderDbList(1, e.target.value);
+        renderDbList(e.target.value);
     });
 
     // Render the initial list
-    renderDbList(1, '');
+    renderDbList('');
   }
 
   function clearSearch() {
@@ -295,7 +281,7 @@
       if (input) {
           input.value = '';
       }
-      renderDbList(1, ''); // Re-render the list with no search term
+      renderDbList(''); // Re-render the list with no search term
   }
 
   function showImportForm(){
@@ -378,7 +364,7 @@
       }
     }
 
-    const rowsPerPage = 100;
+    const rowsPerPage = 100; // This can be adjusted or removed if not needed for table view
     const start = (page-1)*rowsPerPage;
     const end = start + rowsPerPage;
     const totalPages = Math.max(1, Math.ceil((db.rows||[]).length / rowsPerPage));

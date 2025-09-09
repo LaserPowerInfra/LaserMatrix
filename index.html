@@ -223,11 +223,8 @@
 
   let dbPage = 1, dbPerPage = 10, currentPopupDB = null;
 
-  function openDatabases(page=1, searchTerm=''){
-    hero.innerHTML = '';
-    hero.style.display = 'none';
-    panelArea.style.display = 'block';
-
+  // REFACTORED FUNCTION TO ONLY RENDER THE LIST + PAGINATION
+  function renderDbList(page = 1, searchTerm = ''){
     const all = Object.keys(databases).filter(n => n.toLowerCase().includes((searchTerm||'').toLowerCase()));
     const total = all.length;
     const totalPages = Math.max(1, Math.ceil(total/dbPerPage));
@@ -236,52 +233,69 @@
     const start = (page-1)*dbPerPage;
     const slice = all.slice(start, start + dbPerPage);
 
-    let html = `
+    const listHtml = slice.length ? slice.map(name => `
+        <div class="db-item">
+            <div style="margin-right:10px;cursor:pointer" onclick="showMenu(event, '${escapeJs(name)}')">⋮</div>
+            <div style="flex:1;cursor:pointer" onclick="openDatabase('${escapeJs(name)}')">📊 ${escapeHtml(name)}</div>
+        </div>
+    `).join('') : `<div style="padding:12px;background:#fff;border-radius:6px">No databases found.</div>`;
+
+    const paginationHtml = `
+        <button class="btn" onclick="renderDbList(${page-1}, document.getElementById('dbSearchInput')?.value||'')" ${page===1? 'disabled':''}>⬅ Prev</button>
+        <span style="margin:0 10px">Page ${page} of ${totalPages}</span>
+        <button class="btn" onclick="renderDbList(${page+1}, document.getElementById('dbSearchInput')?.value||'')" ${page===totalPages? 'disabled':''}>Next ➡</button>
+    `;
+
+    document.getElementById('db-list-container').innerHTML = `<div class="db-list">${listHtml}</div>`;
+    document.getElementById('db-pagination-container').innerHTML = `<div class="pagination">${paginationHtml}</div>`;
+    
+    // Also update total count
+    const totalElem = document.getElementById('db-total-count');
+    if(totalElem) totalElem.textContent = `Total Databases: ${total}`;
+  }
+
+  // THIS FUNCTION NOW ONLY SETS UP THE DATABASE VIEW'S STRUCTURE
+  function openDatabases(){
+    hero.innerHTML = '';
+    hero.style.display = 'none';
+    panelArea.style.display = 'block';
+
+    // This HTML is now just the "frame" for the database view
+    let structureHtml = `
       <div class="db-header">
         <div style="display:flex;align-items:center;gap:12px">
           <div style="display:flex; align-items:center; gap: 8px;">
-            <input id="dbSearchInput" placeholder="Search Database" value="${escapeHtml(searchTerm)}">
+            <input id="dbSearchInput" placeholder="Search Database" value="">
             <button class="btn-clear" onclick="clearSearch()">Clear</button>
           </div>
-          <div style="font-size:13px; color:#666; text-transform: uppercase; font-weight: bold;">Total Databases: ${total}</div>
+          <div id="db-total-count" style="font-size:13px; color:#666; text-transform: uppercase; font-weight: bold;"></div>
         </div>
         <div>
           <button class="btn" onclick="showImportForm()">➕ Add Database</button>
         </div>
       </div>
-
-      <div class="db-list">
-        ${slice.length? slice.map(name => `
-            <div class="db-item">
-              <div style="margin-right:10px;cursor:pointer" onclick="showMenu(event, '${escapeJs(name)}')">⋮</div>
-              <div style="flex:1;cursor:pointer" onclick="openDatabase('${escapeJs(name)}')">📊 ${escapeHtml(name)}</div>
-            </div>
-          `).join('') : `<div style="padding:12px;background:#fff;border-radius:6px">No databases found.</div>`
-        }
-      </div>
-
-      <div class="pagination">
-        <button class="btn" onclick="openDatabases(${page-1}, document.getElementById('dbSearchInput')?.value||'')" ${page===1? 'disabled':''}>⬅ Prev</button>
-        <span style="margin:0 10px">Page ${page} of ${totalPages}</span>
-        <button class="btn" onclick="openDatabases(${page+1}, document.getElementById('dbSearchInput')?.value||'')" ${page===totalPages? 'disabled':''}>Next ➡</button>
-      </div>
+      
+      <div id="db-list-container"></div>
+      <div id="db-pagination-container"></div>
     `;
 
-    panelArea.innerHTML = html;
+    panelArea.innerHTML = structureHtml;
 
-    // ATTACH EVENT LISTENER TO FIX SEARCH INPUT PROBLEM
+    // Attach the event listener for the search input here
     document.getElementById('dbSearchInput').addEventListener('input', (e) => {
-        searchDatabases(e.target.value);
+        renderDbList(1, e.target.value);
     });
+
+    // Render the initial list
+    renderDbList(1, '');
   }
 
-  // NEW FUNCTION FOR CLEAR BUTTON
   function clearSearch() {
-      openDatabases(1, ''); // Re-render the list with no search term
-  }
-
-  function searchDatabases(val){
-    openDatabases(1, val);
+      const input = document.getElementById('dbSearchInput');
+      if (input) {
+          input.value = '';
+      }
+      renderDbList(1, ''); // Re-render the list with no search term
   }
 
   function showImportForm(){
@@ -370,7 +384,10 @@
     const totalPages = Math.max(1, Math.ceil((db.rows||[]).length / rowsPerPage));
 
     const tableHtml = `
-      <div style="font-weight:700;margin-bottom:12px">${escapeHtml(dbName)}</div>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <div style="font-weight:700;">${escapeHtml(dbName)}</div>
+        <button class="btn" onclick="openDatabases()">⬅️ Back to List</button>
+      </div>
       <div class="table-wrap">
         <div style="overflow:auto;max-height:420px">
           <table>

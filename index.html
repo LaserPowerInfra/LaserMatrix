@@ -96,12 +96,7 @@
       color:transparent;
       font-size:56px; /* large */
       -webkit-text-stroke: 1px rgba(10,10,10,0.12);
-      /* create depth using stacked text-shadow for extrusion */
-      text-shadow:
-        0 1px 0 rgba(0,0,0,0.15),
-        0 2px 0 rgba(0,0,0,0.12),
-        0 3px 0 rgba(0,0,0,0.10),
-        0 4px 10px rgba(0,0,0,0.35);
+      /* SHADOW REMOVED FROM HERE */
       transform-origin:center top;
       /* subtle 3d tilt */
       transform: translateZ(40px) rotateX(6deg);
@@ -119,19 +114,8 @@
       font-size:20px;
       margin-bottom:8px;
     }
-
-    /* "extrude" pseudo-layer for stronger 3D feel using pseudo-element */
-    .three-d::after{
-      content:attr(data-text);
-      position:absolute;
-      left:0; top:0;
-      z-index:-1;
-      color:rgba(0,0,0,0.15);
-      transform: translate(8px,14px) skewX(-6deg) scaleY(1);
-      filter:blur(0.5px);
-      -webkit-mask-image: linear-gradient(#000, transparent);
-      pointer-events:none;
-    }
+    
+    /* "extrude" pseudo-layer REMOVED */
 
     /* responsive adjustments */
     @media (max-width:1000px){
@@ -168,7 +152,6 @@
 </head>
 <body>
 
-  <!-- Sidebar -->
   <aside class="sidebar" role="navigation" aria-label="Main menu">
     <h2>📂 Menu</h2>
     <button onclick="goHome()">🏠 Home</button>
@@ -178,20 +161,14 @@
     <div class="count" id="dbCount">0 Databases</div>
   </aside>
 
-  <!-- Main area -->
   <main class="main" id="main">
-    <!-- Hero: video background + overlay text (top) -->
     <section class="hero" id="hero">
-      <!-- video inserted dynamically by goHome() to allow switching between views -->
-    </section>
+      </section>
 
-    <!-- Below hero area for panels (databases / forms etc.) -->
     <section id="panelArea" class="panel" aria-live="polite" style="display:none;">
-      <!-- content injected by JS (db list, tables etc.) -->
-    </section>
+      </section>
   </main>
 
-  <!-- popup menu (for db items) -->
   <div id="popupMenu" style="position:absolute;display:none;background:#fff;border:1px solid #ddd;border-radius:6px;box-shadow:0 6px 20px rgba(0,0,0,0.12);min-width:140px;z-index:30">
     <div style="padding:8px;cursor:pointer" onclick="renameDatabase()">📝 Rename</div>
     <div style="padding:8px;cursor:pointer" onclick="deleteDatabase()">🗑 Delete</div>
@@ -214,7 +191,6 @@
     return `
       <div class="overlay-top" aria-hidden="true">
         <div class="sub-title">WELCOME TO</div>
-        <!-- data-text needed for ::after extrude layer -->
         <div class="three-d" data-text="LASER MATRIX">LASER MATRIX</div>
       </div>
     `;

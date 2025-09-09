@@ -175,7 +175,6 @@
         color: #555;
     }
     .filter-icon:hover { color: #000; }
-    /* Styles for the new filter popup menu */
     .filter-popup {
         display: none;
         position: absolute;
@@ -263,7 +262,7 @@
     <div style="padding:8px;cursor:pointer" onclick="deleteDatabase()">🗑 Delete</div>
   </div>
 
-  <div id="filterMenu" class="filter-popup"></div>
+  <div id="filterMenu" class="filter-popup" onclick="event.stopPropagation()"></div>
 
 <script>
   let databases = JSON.parse(localStorage.getItem("databases") || "{}");
@@ -360,7 +359,12 @@
   
   function setAllFilterCheckboxes(isChecked) {
       const checkboxes = document.querySelectorAll('#filter-options-list .filter-option-cb');
-      checkboxes.forEach(cb => cb.checked = isChecked);
+      checkboxes.forEach(cb => {
+        // Only change visible checkboxes
+        if (cb.parentElement.style.display !== 'none') {
+            cb.checked = isChecked;
+        }
+      });
   }
 
   function showFilterMenu(event, columnIndex) {
@@ -371,7 +375,7 @@
     
     const uniqueValues = new Set();
     db.rows.forEach(row => {
-        if(row[columnIndex]) uniqueValues.add(row[columnIndex]);
+        if(row[columnIndex] !== '' && row[columnIndex] !== null) uniqueValues.add(row[columnIndex]);
     });
     
     const currentSelection = new Set(activeFilters[columnIndex] || []);
@@ -415,8 +419,7 @@
         allValues.push(cb.value);
     });
 
-    // If everything is selected, it's the same as no filter, so we clear it.
-    if (selectedValues.length === allValues.length) {
+    if (selectedValues.length === allValues.length || selectedValues.length === 0) {
         delete activeFilters[columnIndex];
     } else {
         activeFilters[columnIndex] = selectedValues;

@@ -57,7 +57,6 @@
       object-fit:cover;
     }
 
-    /* Overlay text */
     .overlay-text {
       position:absolute;
       top:50px;
@@ -66,17 +65,17 @@
       z-index:1;
     }
     .overlay-text h1 {
+      font-size:60px;
       margin:0;
       text-transform:uppercase;
       font-weight:bold;
-      text-shadow: 2px 2px 6px rgba(0,0,0,0.7), 4px 4px 12px rgba(0,0,0,0.5);
+      text-shadow: 2px 2px 6px rgba(0,0,0,0.6);
     }
     .overlay-text .welcome {
-      font-size:50px;
       color: #fff;
+      font-size:50px;
       letter-spacing:3px;
-      text-shadow: 0 0 10px #ffffff, 0 0 20px #cccccc, 0 0 30px #999999;
-      animation: glowWhite 2s infinite alternate;
+      text-shadow: 2px 2px 6px #000, 4px 4px 12px #555;
     }
     .overlay-text .laser-matrix {
       font-size:70px;
@@ -84,18 +83,7 @@
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       letter-spacing:5px;
-      text-shadow: 0 0 15px rgba(0,195,255,0.7), 0 0 25px rgba(255,95,109,0.7);
-      animation: glowColor 2s infinite alternate;
-    }
-
-    /* Glow animations */
-    @keyframes glowWhite {
-      from { text-shadow: 0 0 5px #fff, 0 0 10px #aaa; }
-      to { text-shadow: 0 0 15px #fff, 0 0 30px #ddd; }
-    }
-    @keyframes glowColor {
-      from { text-shadow: 0 0 10px rgba(0,195,255,0.7), 0 0 20px rgba(255,95,109,0.7); }
-      to { text-shadow: 0 0 25px rgba(0,195,255,1), 0 0 40px rgba(255,95,109,1); }
+      text-shadow: 2px 2px 6px rgba(0,0,0,0.6), 4px 4px 12px rgba(0,0,0,0.4);
     }
 
     /* Inner dynamic area */

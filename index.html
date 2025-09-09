@@ -175,7 +175,6 @@
         color: #555;
     }
     .filter-icon:hover { color: #000; }
-    /* Style for the active filter icon */
     .filter-icon.active-filter {
         color: var(--accent);
         font-weight: bold;
@@ -383,9 +382,24 @@
     });
     
     const currentSelection = new Set(activeFilters[columnIndex] || []);
+    let sortedValues = [...uniqueValues];
+
+    // **** NEW SORTING LOGIC ****
+    // If a filter is active for this column, sort selected items to the top.
+    if (currentSelection.size > 0) {
+        sortedValues.sort((a, b) => {
+            const aIsSelected = currentSelection.has(a);
+            const bIsSelected = currentSelection.has(b);
+            if (aIsSelected && !bIsSelected) return -1; // a comes first
+            if (!aIsSelected && bIsSelected) return 1;  // b comes first
+            return String(a).localeCompare(String(b)); // otherwise, sort alphabetically
+        });
+    } else {
+        sortedValues.sort((a,b) => String(a).localeCompare(String(b))); // Default alphabetical sort
+    }
     
     let listItemsHtml = '';
-    [...uniqueValues].sort().forEach(value => {
+    sortedValues.forEach(value => {
         const isChecked = currentSelection.size === 0 || currentSelection.has(value);
         listItemsHtml += `<label><input type="checkbox" class="filter-option-cb" value="${escapeHtml(value)}" ${isChecked ? 'checked' : ''}> ${escapeHtml(value)}</label>`;
     });
@@ -455,18 +469,16 @@
 
     const bodyHtml = filteredRows.map(r => `<tr>${r.map(c => `<td>${escapeHtml(String(c||''))}</td>`).join('')}</tr>`).join('');
     document.getElementById('data-table-body').innerHTML = bodyHtml;
-    updateFilterIcons(); // Update icons after rendering
+    updateFilterIcons();
   }
   
-  // NEW FUNCTION TO CLEAR ALL FILTERS
   function clearAllFilters() {
     activeFilters = {};
     renderTableBody();
   }
   
-  // NEW FUNCTION TO UPDATE ICONS BASED ON ACTIVE FILTERS
   function updateFilterIcons() {
-      const headers = document.querySelectorAll('#data-table th .filter-icon');
+      const headers = document.querySelectorAll('#data-table .filter-icon');
       headers.forEach((icon, index) => {
           if (activeFilters[index] && activeFilters[index].length > 0) {
               icon.classList.add('active-filter');
@@ -475,7 +487,6 @@
           }
       });
   }
-  // --- End of Filter Logic ---
 
   async function openDatabase(dbName){
     currentDbName = dbName;

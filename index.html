@@ -175,6 +175,11 @@
         color: #555;
     }
     .filter-icon:hover { color: #000; }
+    /* Style for the active filter icon */
+    .filter-icon.active-filter {
+        color: var(--accent);
+        font-weight: bold;
+    }
     .filter-popup {
         display: none;
         position: absolute;
@@ -360,7 +365,6 @@
   function setAllFilterCheckboxes(isChecked) {
       const checkboxes = document.querySelectorAll('#filter-options-list .filter-option-cb');
       checkboxes.forEach(cb => {
-        // Only change visible checkboxes
         if (cb.parentElement.style.display !== 'none') {
             cb.checked = isChecked;
         }
@@ -451,6 +455,25 @@
 
     const bodyHtml = filteredRows.map(r => `<tr>${r.map(c => `<td>${escapeHtml(String(c||''))}</td>`).join('')}</tr>`).join('');
     document.getElementById('data-table-body').innerHTML = bodyHtml;
+    updateFilterIcons(); // Update icons after rendering
+  }
+  
+  // NEW FUNCTION TO CLEAR ALL FILTERS
+  function clearAllFilters() {
+    activeFilters = {};
+    renderTableBody();
+  }
+  
+  // NEW FUNCTION TO UPDATE ICONS BASED ON ACTIVE FILTERS
+  function updateFilterIcons() {
+      const headers = document.querySelectorAll('#data-table th .filter-icon');
+      headers.forEach((icon, index) => {
+          if (activeFilters[index] && activeFilters[index].length > 0) {
+              icon.classList.add('active-filter');
+          } else {
+              icon.classList.remove('active-filter');
+          }
+      });
   }
   // --- End of Filter Logic ---
 
@@ -462,12 +485,15 @@
 
     if(db.type === 'gsheet' && db.url){ /* ... gsheet fetch logic ... */ }
 
-    const headerHtml = (db.headers||[]).map((h, i) => `<th><div class="th-content"><span>${escapeHtml(h.name)}</span><span class="filter-icon" onclick="showFilterMenu(event, ${i})">&#9660;</span></div></th>`).join('');
+    const headerHtml = (db.headers||[]).map((h, i) => `<th><div class="th-content"><span>${escapeHtml(h.name)}</span><span id="filter-icon-${i}" class="filter-icon" onclick="showFilterMenu(event, ${i})">&#9660;</span></div></th>`).join('');
 
     const tableHtml = `
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
         <div style="font-weight:700;">${escapeHtml(dbName)}</div>
-        <button class="btn" onclick="openDatabases()">⬅️ Back to List</button>
+        <div style="display:flex; gap: 10px;">
+             <button class="btn" onclick="clearAllFilters()">Clear All Filters</button>
+             <button class="btn" onclick="openDatabases()">⬅️ Back to List</button>
+        </div>
       </div>
       <div class="table-wrap">
         <div style="overflow:auto; max-height:75vh;">

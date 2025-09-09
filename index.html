@@ -4,10 +4,54 @@
   <meta charset="UTF-8">
   <title>Database Viewer</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 0; background: #f8f9fa; }
-    .container { max-width: 95%; margin: auto; padding: 20px; }
-    h2 { margin: 10px 0; }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: #f8f9fa;
+      display: flex;
+    }
 
+    /* Sidebar */
+    #menu {
+      width: 220px;
+      background: #2c3e50;
+      color: white;
+      height: 100vh;
+      padding: 15px;
+      box-sizing: border-box;
+    }
+    #menu h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    #menu button {
+      display: block;
+      width: 100%;
+      background: #34495e;
+      color: white;
+      border: none;
+      padding: 10px;
+      margin: 5px 0;
+      cursor: pointer;
+      border-radius: 6px;
+      text-align: left;
+    }
+    #menu button:hover {
+      background: #1abc9c;
+    }
+
+    /* Main Content */
+    .container {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    h2 {
+      margin: 10px 0;
+    }
+
+    /* Table Container */
     .table-container {
       max-height: 70vh;
       overflow-x: auto;
@@ -18,10 +62,25 @@
       display: block;
     }
 
-    table { width: 100%; border-collapse: collapse; }
-    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-    th { background: #f4f4f4; position: sticky; top: 0; z-index: 2; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
 
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+    }
+
+    th {
+      background: #f4f4f4;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+
+    /* Pagination */
     .pagination {
       display: flex;
       justify-content: center;
@@ -36,6 +95,15 @@
   </style>
 </head>
 <body>
+  <!-- Sidebar -->
+  <div id="menu">
+    <h2>MENU</h2>
+    <button onclick="alert('Home Clicked')">🏠 Home</button>
+    <button onclick="alert('Databases Clicked')">📂 Databases</button>
+    <button onclick="alert('Forms Clicked')">📝 Forms</button>
+  </div>
+
+  <!-- Main Container -->
   <div class="container">
     <h2>AAA LASER</h2>
     <div class="table-container">
@@ -63,6 +131,7 @@
       </table>
     </div>
 
+    <!-- Pagination -->
     <div class="pagination">
       <button onclick="prevPage()">⬅ Prev</button>
       <span>Page <input type="number" id="pageInput" min="1" value="1" onchange="goToPage()"> of <span id="totalPages"></span></span>
@@ -71,7 +140,7 @@
   </div>
 
   <script>
-    // Dummy Data (তুমি চাইলে এখানে তোমার data বসাতে পারো)
+    // Dummy Data (তুমি চাইলে এখানে তোমার ডেটা বসাবে)
     const rows = [
       ["10034@Deepak Kumar Mithilesh Das", "10034", "LP", "Deepak Kumar Mithilesh Das", "MEC", "FITTE", "G1", "2018-06-11", "1989-04-01", "MITHLESH DAS", "NA", "", "U1", "", "WARD NO. - 08, BAGH"],
       ["10108@Pappu Yadav", "10108", "LP", "Pappu Yadav", "HOUSE", "PEON", "G1", "2013-01-01", "1983-03-20", "NA", "NA", "", "U1", "", ""],

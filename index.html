@@ -80,6 +80,10 @@
     .menu-item { padding:8px 12px; cursor:pointer; }
     .menu-item:hover { background:#f0f0f0; }
     .menu-item:active { background:#d0d0d0; }
+
+    /* Pagination */
+    .pagination { text-align:center; padding:10px; }
+    .pagination button { padding:6px 12px; margin:0 4px; }
   </style>
 </head>
 <body onload="goHome()">
@@ -104,6 +108,8 @@
 let databases = JSON.parse(localStorage.getItem("databases") || "{}");
 let currentPopupDB = null;
 let historyStack = [];
+let dbPage = 1;   // 🔥 database list pagination এর জন্য
+const dbPerPage = 10; // প্রতি পেইজে কয়টা database দেখাবে
 
 // Save databases
 function saveDatabases() { localStorage.setItem("databases", JSON.stringify(databases)); }
@@ -120,21 +126,38 @@ function goHome() { setContent("<h2 style='padding:20px'>Welcome</h2><p style='p
 function openForms() { setContent("<h2 style='padding:20px'>Forms</h2><p style='padding:20px'>Forms functionality will go here.</p>"); }
 
 // Open Databases
-function openDatabases() {
+function openDatabases(page=1, searchTerm="") {
+  dbPage = page;
+  let allDBs = Object.keys(databases);
+
+  // search filter
+  if(searchTerm) {
+    allDBs = allDBs.filter(db => db.toLowerCase().includes(searchTerm.toLowerCase()));
+  }
+
+  const totalPages = Math.ceil(allDBs.length / dbPerPage);
+  const start = (page-1) * dbPerPage;
+  const end = start + dbPerPage;
+  const pagedDBs = allDBs.slice(start, end);
+
   setContent(`
     <div class="db-header">
-      <input type="text" id="dbSearch" placeholder="Search databases..." oninput="searchDatabases()">
+      <input type="text" id="dbSearch" placeholder="Search databases..." oninput="searchDatabases(this.value)">
       <button onclick="showImportForm()">➕ Add Database</button>
     </div>
     <div id="dbListContainer">
-      ${generateDbListHTML()}
+      ${generateDbListHTML(pagedDBs)}
+    </div>
+    <div class="pagination">
+      <button onclick="openDatabases(${page-1}, document.getElementById('dbSearch')?.value||'')" ${page===1?"disabled":""}>⬅ Prev</button>
+      <span> Page ${page} of ${totalPages||1} </span>
+      <button onclick="openDatabases(${page+1}, document.getElementById('dbSearch')?.value||'')" ${page===totalPages?"disabled":""}>Next ➡</button>
     </div>
   `);
 }
 
 // Generate database list HTML
-function generateDbListHTML(filteredList) {
-  let dbs = filteredList || Object.keys(databases);
+function generateDbListHTML(dbs) {
   if(!dbs.length) return "<p>No databases found.</p>";
   return dbs.map(db => `
     <div class="db-item">
@@ -145,10 +168,8 @@ function generateDbListHTML(filteredList) {
 }
 
 // Search databases
-function searchDatabases() {
-  let val = document.getElementById("dbSearch").value.toLowerCase();
-  let filtered = Object.keys(databases).filter(db => db.toLowerCase().includes(val));
-  document.getElementById("dbListContainer").innerHTML = generateDbListHTML(filtered);
+function searchDatabases(val) {
+  openDatabases(1, val);
 }
 
 // Show import form
@@ -210,7 +231,7 @@ function importGoogleSheet() {
   saveDatabases(); openDatabases();
 }
 
-// Open database table
+// Open database table (unchanged except pagination for rows)
 async function openDatabase(dbName, page=1){
   const db = databases[dbName];
   if(db.type==="gsheet"){

@@ -144,7 +144,7 @@
     .db-list{max-height:320px;overflow:auto;padding:10px}
     .table-wrap{background:#fff;padding:12px;border-radius:8px;border:1px solid #e6ebee}
     table{width:100%;border-collapse:collapse}
-    th,td{border:1px solid #e6ebee;padding:8px;text-align:left;font-size:13px}
+    th,td{border:1px solid #e6ebee;padding:8px;text-align:left;font-size:13px; vertical-align: top;}
     th{background:#f4f6f8;position:sticky;top:0}
     .pagination{margin-top:12px;text-align:center}
     
@@ -187,14 +187,21 @@
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1), inset 0 -2px 0 rgba(0, 0, 0, 0.2);
         transform: translateY(1px);
     }
+    /* Styles for new filter elements */
+    .th-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
     .filter-input {
         width: 100%;
         padding: 4px;
         box-sizing: border-box;
         border: 1px solid #ccc;
         border-radius: 4px;
+        margin-top: 4px;
+        display: none; /* Hidden by default */
     }
-    /* Style for the new filter icon */
     .filter-icon {
         cursor: pointer;
         font-size: 12px;
@@ -377,11 +384,15 @@
     openDatabases();
   }
 
-  // NEW FUNCTION TO TOGGLE THE FILTER ROW'S VISIBILITY
-  function toggleFilterRow() {
-    const filterRow = document.getElementById('filter-row');
-    if (filterRow) {
-        filterRow.style.display = filterRow.style.display === 'none' ? 'table-row' : 'none';
+  // NEW FUNCTION TO TOGGLE AN INDIVIDUAL FILTER INPUT
+  function toggleFilterInput(columnIndex) {
+    const filterInput = document.getElementById(`filter-input-${columnIndex}`);
+    if (filterInput) {
+        const isVisible = filterInput.style.display === 'block';
+        filterInput.style.display = isVisible ? 'none' : 'block';
+        if (!isVisible) {
+            filterInput.focus();
+        }
     }
   }
 
@@ -421,10 +432,16 @@
     const end = start + rowsPerPage;
     const totalPages = Math.max(1, Math.ceil((db.rows||[]).length / rowsPerPage));
     
-    // Create header row with filter icons
-    const headerHtml = (db.headers||[]).map(h => `<th>${escapeHtml(h.name)} <span class="filter-icon" onclick="toggleFilterRow()">&#9660;</span></th>`).join('');
-    // Create the hidden row with filter inputs
-    const filterHtml = (db.headers||[]).map((h, i) => `<th><input type="text" class="filter-input" onkeyup="filterTable()" placeholder="Filter..."></th>`).join('');
+    // Create header with individual toggle and hidden input
+    const headerHtml = (db.headers||[]).map((h, i) => `
+        <th>
+            <div class="th-content">
+                <span>${escapeHtml(h.name)}</span>
+                <span class="filter-icon" onclick="toggleFilterInput(${i})">&#9660;</span>
+            </div>
+            <input type="text" id="filter-input-${i}" class="filter-input" onkeyup="filterTable()" placeholder="Filter...">
+        </th>
+    `).join('');
 
     const tableHtml = `
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
@@ -436,7 +453,6 @@
           <table id="data-table">
             <thead>
                 <tr>${headerHtml}</tr>
-                <tr id="filter-row" style="display: none;">${filterHtml}</tr>
             </thead>
             <tbody id="data-table-body">
               ${(db.rows||[]).slice(start,end).map(r => `<tr>${r.map(c => `<td>${escapeHtml(String(c||''))}</td>`).join('')}</tr>`).join('')}

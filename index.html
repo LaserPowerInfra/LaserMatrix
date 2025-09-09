@@ -63,7 +63,6 @@
       position:relative;
       flex:1 0 auto;
       min-height:360px;
-      /* perspective for 3D effect on text */
       perspective:1200px;
       overflow:hidden;
       background:#000;
@@ -78,12 +77,12 @@
     /* overlay container for top text (stays at top) */
     .hero .overlay-top{
       position:absolute;
-      top:28px; /* near the top as requested */
+      top:28px;
       left:50%;
       transform:translateX(-50%);
       width:calc(100% - var(--sidebar-w) - 60px);
       max-width:1200px;
-      pointer-events:none; /* click-through so buttons underneath still work if any */
+      pointer-events:none;
       text-align:center;
       z-index:5;
     }
@@ -96,15 +95,13 @@
       letter-spacing:2px;
       text-transform:uppercase;
       font-family: "Poppins", "Montserrat", Arial, sans-serif;
-      /* gradient fill */
       background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(220,255,240,0.9) 40%, rgba(26,188,156,0.95));
       -webkit-background-clip:text;
       background-clip:text;
       color:transparent;
-      font-size:56px; /* large */
+      font-size:56px;
       -webkit-text-stroke: 1px rgba(10,10,10,0.12);
       transform-origin:center top;
-      /* subtle 3d tilt */
       transform: translateZ(40px) rotateX(6deg);
       display:block;
       margin:0 auto;
@@ -137,7 +134,7 @@
       background:#f7f8fa;
       padding:18px;
       overflow:auto;
-      height:calc(100vh - 40px); /* Adjusted height to fill the screen better */
+      height:calc(100vh - 40px);
     }
 
     /* db list & table styling (kept from previous design) */
@@ -152,6 +149,19 @@
     .pagination{margin-top:12px;text-align:center}
     .btn{background:var(--muted);color:#fff;padding:8px 12px;border-radius:6px;border:0;cursor:pointer}
     .btn:hover{background:var(--accent)}
+    /* ADDED STYLE FOR CLEAR BUTTON */
+    .btn-clear {
+        background: #ff6666; /* Light red */
+        color: white;
+        border: none;
+        padding: 8px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+    }
+    .btn-clear:hover {
+        background: #e65c5c; /* Darker red */
+    }
   </style>
 </head>
 <body>
@@ -178,12 +188,10 @@
   </div>
 
 <script>
-  // --- data & helpers ---
   let databases = JSON.parse(localStorage.getItem("databases") || "{}");
   const hero = document.getElementById('hero');
   const panelArea = document.getElementById('panelArea');
 
-  // slide-in HTML for overlay text at top with 3D appearance
   function renderHeroOverlay(){
     return `
       <div class="overlay-top" aria-hidden="true">
@@ -193,13 +201,9 @@
     `;
   }
 
-  // --- views ---
   function goHome(){
-    // hide panel area
     panelArea.style.display = 'none';
-    hero.style.display = ''; // Ensure hero is visible
-
-    // populate hero with video + overlay (video covers whole hero)
+    hero.style.display = '';
     hero.innerHTML = `
       <video autoplay muted loop playsinline>
         <source src="https://laserpowerinfra.com/frontassets/img/slider/Banner_v04_HD_L.mp4" type="video/mp4">
@@ -211,18 +215,17 @@
 
   function openForms(){
     hero.innerHTML = '';
-    hero.style.display = 'none'; // ADDED THIS LINE TO HIDE THE HERO
+    hero.style.display = 'none';
     panelArea.style.display = 'block';
     panelArea.innerHTML = `<div style="font-weight:700;margin-bottom:10px">Forms</div>
       <div style="background:#fff;padding:12px;border-radius:8px">Forms functionality will go here.</div>`;
   }
 
-  // Database list page
   let dbPage = 1, dbPerPage = 10, currentPopupDB = null;
 
   function openDatabases(page=1, searchTerm=''){
-    hero.innerHTML = ''; // hide hero when viewing DBs
-    hero.style.display = 'none'; // ADDED THIS LINE TO HIDE THE HERO
+    hero.innerHTML = '';
+    hero.style.display = 'none';
     panelArea.style.display = 'block';
 
     const all = Object.keys(databases).filter(n => n.toLowerCase().includes((searchTerm||'').toLowerCase()));
@@ -233,12 +236,14 @@
     const start = (page-1)*dbPerPage;
     const slice = all.slice(start, start + dbPerPage);
 
-    // build db list html
     let html = `
       <div class="db-header">
         <div style="display:flex;align-items:center;gap:12px">
-          <input id="dbSearchInput" placeholder="Search databases..." value="${escapeHtml(searchTerm)}" oninput="searchDatabases(this.value)">
-          <div style="font-size:13px; color:#666; text-transform: uppercase; font-weight: bold;">Total: ${total}</div>
+          <div style="display:flex; align-items:center; gap: 8px;">
+            <input id="dbSearchInput" placeholder="Search Database" value="${escapeHtml(searchTerm)}">
+            <button class="btn-clear" onclick="clearSearch()">Clear</button>
+          </div>
+          <div style="font-size:13px; color:#666; text-transform: uppercase; font-weight: bold;">Total Databases: ${total}</div>
         </div>
         <div>
           <button class="btn" onclick="showImportForm()">➕ Add Database</button>
@@ -263,6 +268,16 @@
     `;
 
     panelArea.innerHTML = html;
+
+    // ATTACH EVENT LISTENER TO FIX SEARCH INPUT PROBLEM
+    document.getElementById('dbSearchInput').addEventListener('input', (e) => {
+        searchDatabases(e.target.value);
+    });
+  }
+
+  // NEW FUNCTION FOR CLEAR BUTTON
+  function clearSearch() {
+      openDatabases(1, ''); // Re-render the list with no search term
   }
 
   function searchDatabases(val){
@@ -270,8 +285,8 @@
   }
 
   function showImportForm(){
-    hero.innerHTML = ''; // ensure hero hidden
-    hero.style.display = 'none'; // Also hide hero here
+    hero.innerHTML = '';
+    hero.style.display = 'none';
     panelArea.style.display = 'block';
     panelArea.innerHTML = `
       <div style="font-weight:700;margin-bottom:12px">Add Database</div>
@@ -291,7 +306,6 @@
     `;
   }
 
-  // CSV import
   function importCSV(){
     const fi = document.getElementById('csvFile');
     const status = document.getElementById('statusBox');
@@ -328,12 +342,10 @@
     openDatabases();
   }
 
-  // open database table view (in panelArea)
   async function openDatabase(dbName, page=1){
     const db = databases[dbName];
     if(!db){ alert('DB not found'); return; }
 
-    // if gsheet, fetch live csv
     if(db.type === 'gsheet' && db.url){
       let csvUrl = db.url;
       if(db.url.includes('/edit')) csvUrl = db.url.replace('/edit','/gviz/tq?tqx=out:csv');
@@ -378,13 +390,12 @@
     `;
 
     panelArea.style.display = 'block';
-    hero.innerHTML = ''; // ensure hero hidden while showing DB
-    hero.style.display = 'none'; // Also hide hero here
+    hero.innerHTML = '';
+    hero.style.display = 'none';
     panelArea.innerHTML = tableHtml;
   }
   function jumpToPage(dbName,val){ const p = parseInt(val); if(p>0) openDatabase(dbName,p); }
 
-  // popup menu for rename/delete (positioning and actions)
   function showMenu(ev, dbName){
     ev.stopPropagation();
     currentPopupDB = dbName;
@@ -411,11 +422,9 @@
     openDatabases();
   }
 
-  // helpers to avoid XSS when injecting names
   function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
   function escapeJs(s){ return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'\\"'); }
 
-  // initial view
   goHome();
 </script>
 </body>

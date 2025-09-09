@@ -85,7 +85,7 @@
       margin-bottom:8px;
     }
 
-    /* LASER MATRIX light blue → light red gradient 3D */
+    /* LASER MATRIX light blue → light red gradient 3D with white downward shadow */
     .three-d {
       display:inline-block;
       line-height:1;
@@ -98,16 +98,17 @@
       background-clip:text;
       color:transparent;
       font-size:56px;
-      -webkit-text-stroke: 1px rgba(10,10,10,0.12);
+      -webkit-text-stroke: 1px rgba(255,255,255,0.3);
       text-shadow:
-        0 1px 0 rgba(0,0,0,0.15),
-        0 2px 0 rgba(0,0,0,0.12),
-        0 3px 0 rgba(0,0,0,0.10),
-        0 4px 10px rgba(0,0,0,0.35);
+        0 2px 2px rgba(255,255,255,0.6),
+        0 4px 4px rgba(255,255,255,0.4),
+        0 6px 6px rgba(255,255,255,0.3),
+        0 8px 8px rgba(255,255,255,0.2);
       transform-origin:center top;
       transform: translateZ(40px) rotateX(6deg);
       display:block;
       margin:0 auto;
+      position:relative;
     }
 
     .three-d::after{
@@ -115,10 +116,9 @@
       position:absolute;
       left:0; top:0;
       z-index:-1;
-      color:rgba(0,0,0,0.15);
-      transform: translate(8px,14px) skewX(-6deg) scaleY(1);
-      filter:blur(0.5px);
-      -webkit-mask-image: linear-gradient(#000, transparent);
+      color:rgba(255,255,255,0.25);
+      transform: translate(0px, 14px) skewX(0deg) scaleY(1);
+      filter:blur(1px);
       pointer-events:none;
     }
 

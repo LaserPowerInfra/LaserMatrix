@@ -186,12 +186,21 @@
         z-index: 40;
         width: 240px;
     }
-    .filter-popup-header, .filter-popup-footer {
+    .filter-popup-header {
         padding: 8px;
         background-color: #f7f8fa;
         font-size: 13px;
+        border-bottom: 1px solid #eee;
+    }
+    .filter-popup-header span {
+        cursor: pointer;
+        color: #007bff;
+        text-decoration: underline;
+        margin-right: 10px;
     }
     .filter-popup-footer {
+        padding: 8px;
+        background-color: #f7f8fa;
         text-align: right;
         border-top: 1px solid #eee;
     }
@@ -349,14 +358,14 @@
     });
   }
   
-  function toggleAllFilterCheckboxes(masterCheckbox) {
+  function setAllFilterCheckboxes(isChecked) {
       const checkboxes = document.querySelectorAll('#filter-options-list .filter-option-cb');
-      checkboxes.forEach(cb => cb.checked = masterCheckbox.checked);
+      checkboxes.forEach(cb => cb.checked = isChecked);
   }
 
   function showFilterMenu(event, columnIndex) {
     event.stopPropagation();
-    hideFilterMenu(); // Hide any other open menu
+    hideFilterMenu();
     const db = databases[currentDbName];
     if (!db) return;
     
@@ -366,19 +375,18 @@
     });
     
     const currentSelection = new Set(activeFilters[columnIndex] || []);
-    let allSelected = true;
-
+    
     let listItemsHtml = '';
     [...uniqueValues].sort().forEach(value => {
         const isChecked = currentSelection.size === 0 || currentSelection.has(value);
-        if (!isChecked) allSelected = false;
         listItemsHtml += `<label><input type="checkbox" class="filter-option-cb" value="${escapeHtml(value)}" ${isChecked ? 'checked' : ''}> ${escapeHtml(value)}</label>`;
     });
 
     const menu = document.getElementById('filterMenu');
     menu.innerHTML = `
         <div class="filter-popup-header">
-            <label><input type="checkbox" id="filter-select-all" onchange="toggleAllFilterCheckboxes(this)" ${allSelected ? 'checked' : ''}> <b>(Select All)</b></label>
+            <span onclick="setAllFilterCheckboxes(true)">(Select All)</span>
+            <span onclick="setAllFilterCheckboxes(false)">(Clear All)</span>
         </div>
         <div class="filter-popup-search">
             <input type="text" id="filter-search-input" onkeyup="filterMenuOptions()" placeholder="Search options...">
@@ -402,10 +410,16 @@
         selectedValues.push(cb.value);
     });
 
-    if (selectedValues.length > 0) {
-        activeFilters[columnIndex] = selectedValues;
-    } else {
+    const allValues = [];
+    document.querySelectorAll('#filter-options-list .filter-option-cb').forEach(cb => {
+        allValues.push(cb.value);
+    });
+
+    // If everything is selected, it's the same as no filter, so we clear it.
+    if (selectedValues.length === allValues.length) {
         delete activeFilters[columnIndex];
+    } else {
+        activeFilters[columnIndex] = selectedValues;
     }
     renderTableBody();
     hideFilterMenu();

@@ -544,68 +544,72 @@
     }
   }
 
-  // **** THIS IS THE MAIN FUNCTION TO FIX AND UPDATE ****
   async function openDatabase(dbName, forceRefresh = false){
     currentDbName = dbName;
-    activeFilters = {};
+    if (!forceRefresh) {
+        activeFilters = {}; // Reset filters only when opening a DB, not on refresh
+    }
+    
     const db = databases[dbName];
     if(!db){ alert('DB not found'); return; }
 
+    // This block will now run on first open AND on manual refresh
     if(db.type === 'gsheet' && db.url){
-      // If we force a refresh, clear the old data first
-      if (forceRefresh) {
+      if (!db.rows || db.rows.length === 0 || forceRefresh) {
           db.rows = [];
           db.headers = [];
-      }
-      
-      let csvUrl = db.url;
-      if(db.url.includes('/edit')) csvUrl = db.url.replace('/edit','/gviz/tq?tqx=out:csv');
-      else if(db.url.includes('output=csv')) csvUrl = db.url;
-      else if(db.url.includes('/pub')) csvUrl = db.url.includes('output=csv') ? db.url : db.url.replace('/pub','/pub?output=csv');
-      try{
-        const r = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(csvUrl));
-        const txt = await r.text();
-        const parsed = Papa.parse(txt, { header:true, skipEmptyLines:true });
-        db.headers = (parsed.meta.fields || []).map(f=>({name:f}));
-        db.rows = (parsed.data || []).map(row => db.headers.map(h => row[h.name] || ''));
-        databases[dbName] = db;
-        localStorage.setItem('databases', JSON.stringify(databases));
-        if (forceRefresh) {
-            alert('Data has been refreshed successfully!');
-        }
-      }catch(e){
-        console.warn('gsheet fetch failed', e);
-        alert('Failed to fetch data from Google Sheet. Please check the URL and sharing permissions.');
+          let csvUrl = db.url;
+          if(db.url.includes('/edit')) csvUrl = db.url.replace('/edit','/gviz/tq?tqx=out:csv');
+          else if(db.url.includes('output=csv')) csvUrl = db.url;
+          else if(db.url.includes('/pub')) csvUrl = db.url.includes('output=csv') ? db.url : db.url.replace('/pub','/pub?output=csv');
+          try{
+            const r = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(csvUrl));
+            if (!r.ok) throw new Error('Network response was not ok');
+            const txt = await r.text();
+            const parsed = Papa.parse(txt, { header:true, skipEmptyLines:true });
+            db.headers = (parsed.meta.fields || []).map(f=>({name:f}));
+            db.rows = (parsed.data || []).map(row => db.headers.map(h => row[h.name] || ''));
+            databases[dbName] = db;
+            localStorage.setItem('databases', JSON.stringify(databases));
+            if (forceRefresh) {
+                alert('Data has been refreshed successfully!');
+            }
+          }catch(e){
+            console.warn('gsheet fetch failed', e);
+            alert('Failed to fetch data from Google Sheet. Check the link or network.');
+            // Don't proceed to render if fetch fails on refresh
+            if (forceRefresh) return;
+          }
       }
     }
 
-    const headerHtml = (db.headers||[]).map((h, i) => `<th><div class="th-content"><span>${escapeHtml(h.name)}</span><span id="filter-icon-${i}" class="filter-icon" onclick="showFilterMenu(event, ${i})">&#9660;</span></div></th>`).join('');
+    // This part runs only on the first open, not on refresh, to avoid redrawing the whole screen
+    if (!forceRefresh) {
+        const headerHtml = (db.headers||[]).map((h, i) => `<th><div class="th-content"><span>${escapeHtml(h.name)}</span><span id="filter-icon-${i}" class="filter-icon" onclick="showFilterMenu(event, ${i})">&#9660;</span></div></th>`).join('');
+        const tableHtml = `
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <div style="font-weight:700;">${escapeHtml(dbName)}</div>
+            <div style="display:flex; gap: 10px;">
+                 <button class="btn" onclick="manualRefresh()">Manual Refresh</button>
+                 <button class="btn" onclick="scheduleRefresh()">Schedule Refresh</button>
+                 <button class="btn" onclick="clearAllFilters()">Clear All Filters</button>
+                 <button class="btn" onclick="openDatabases()">⬅️ Back to List</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <div style="overflow:auto; max-height:75vh;">
+              <table id="data-table">
+                <thead><tr>${headerHtml}</tr></thead>
+                <tbody id="data-table-body"></tbody>
+              </table>
+            </div>
+            <div id="pagination-container"></div>
+          </div>
+        `;
 
-    const tableHtml = `
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-        <div style="font-weight:700;">${escapeHtml(dbName)}</div>
-        <div style="display:flex; gap: 10px;">
-             <button class="btn" onclick="manualRefresh()">Manual Refresh</button>
-             <button class="btn" onclick="scheduleRefresh()">Schedule Refresh</button>
-             <button class="btn" onclick="clearAllFilters()">Clear All Filters</button>
-             <button class="btn" onclick="openDatabases()">⬅️ Back to List</button>
-        </div>
-      </div>
-      <div class="table-wrap">
-        <div style="overflow:auto; max-height:75vh;">
-          <table id="data-table">
-            <thead><tr>${headerHtml}</tr></thead>
-            <tbody id="data-table-body"></tbody>
-          </table>
-        </div>
-        <div id="pagination-container"></div>
-      </div>
-    `;
-
-    panelArea.style.display = 'block';
-    hero.innerHTML = '';
-    hero.style.display = 'none';
-    panelArea.innerHTML = tableHtml;
+        panelArea.innerHTML = tableHtml;
+    }
+    
     renderFilteredAndPagedTable(1);
   }
 

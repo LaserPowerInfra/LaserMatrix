@@ -140,6 +140,8 @@
         font-size: 13px;
     }
     .btn{
+      position: relative; /* Needed for loading animation */
+      overflow: hidden; /* Needed for loading animation */
       background: #ff6666;
       color:#fff;
       padding:8px 12px;
@@ -161,21 +163,20 @@
       box-shadow: none;
       transform: none;
     }
-    .btn-clear {
-        background: #ff6666;
-        color: white;
-        border: none;
-        padding: 8px 12px;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 14px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), inset 0 -3px 0 rgba(0, 0, 0, 0.2);
-        transition: all 0.2s ease;
+    .btn.loading {
+        pointer-events: none;
     }
-    .btn-clear:hover {
-        background: #e65c5c;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1), inset 0 -2px 0 rgba(0, 0, 0, 0.2);
-        transform: translateY(1px);
+    .btn.loading::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(110deg, rgba(255,255,255,0) 8%, rgba(255,255,255,0.2) 18%, rgba(255,255,255,0) 33%);
+        animation: shimmer 1.5s linear infinite;
+        background-size: 200% 100%;
+    }
+    @keyframes shimmer {
+        0% { background-position: 100% 0; }
+        100% { background-position: -100% 0; }
     }
     .th-content {
         display: flex;
@@ -193,68 +194,39 @@
         color: var(--accent);
         font-weight: bold;
     }
-    .filter-popup {
+    .filter-popup, .popup-modal-overlay {
         display: none;
         position: absolute;
+        z-index: 40;
+    }
+    .filter-popup {
         background: #fff;
         border: 1px solid #ccc;
         box-shadow: 0 6px 20px rgba(0,0,0,0.15);
         border-radius: 6px;
-        z-index: 40;
         width: 240px;
     }
-    .filter-popup-header {
-        padding: 8px;
-        background-color: #f7f8fa;
-        font-size: 13px;
-        border-bottom: 1px solid #eee;
+    .filter-popup-header, .filter-popup-footer {
+        padding: 8px; background-color: #f7f8fa;
     }
-    .filter-popup-header span {
-        cursor: pointer;
-        color: #007bff;
-        text-decoration: underline;
-        margin-right: 10px;
-    }
-    .filter-popup-footer {
-        padding: 8px;
-        background-color: #f7f8fa;
-        text-align: right;
-        border-top: 1px solid #eee;
-    }
-    .filter-popup-footer button {
-        padding: 6px 10px;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        cursor: pointer;
-        margin-left: 6px;
-    }
-    .filter-popup-search {
-        padding: 8px;
-        border-bottom: 1px solid #eee;
-    }
-    .filter-popup-search input {
-        width: 100%;
-        padding: 6px;
-        box-sizing: border-box;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-    }
-    .filter-popup-list {
-        max-height: 200px;
-        overflow-y: auto;
-    }
-    .filter-popup-list label {
-        display: block;
-        padding: 6px 12px;
-        cursor: pointer;
-        font-size: 13px;
-        border-bottom: 1px solid #f0f0f0;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
+    .filter-popup-header { font-size: 13px; border-bottom: 1px solid #eee; }
+    .filter-popup-header span { cursor: pointer; color: #007bff; text-decoration: underline; margin-right: 10px; }
+    .filter-popup-footer { text-align: right; border-top: 1px solid #eee; }
+    .filter-popup-footer button { padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; margin-left: 6px; }
+    .filter-popup-search { padding: 8px; border-bottom: 1px solid #eee; }
+    .filter-popup-search input { width: 100%; padding: 6px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+    .filter-popup-list { max-height: 200px; overflow-y: auto; }
+    .filter-popup-list label { display: block; padding: 6px 12px; cursor: pointer; font-size: 13px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px; }
     .filter-popup-list label:hover { background-color: #f5f5f5; }
     .filter-popup-list label:last-child { border-bottom: none; }
+    .popup-modal-overlay {
+        position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+        display: flex; justify-content: center; align-items: center;
+    }
+    .popup-modal-content {
+        background: white; padding: 25px 35px; border-radius: 8px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2); text-align: center;
+    }
   </style>
 </head>
 <body>
@@ -275,12 +247,16 @@
       </section>
   </main>
 
-  <div id="popupMenu" style="position:absolute;display:none;background:#fff;border:1px solid #ddd;border-radius:6px;box-shadow:0 6px 20px rgba(0,0,0,0.12);min-width:140px;z-index:30">
-    <div style="padding:8px;cursor:pointer" onclick="renameDatabase()">📝 Rename</div>
-    <div style="padding:8px;cursor:pointer" onclick="deleteDatabase()">🗑 Delete</div>
-  </div>
+  <div id="popupMenu" class="filter-popup" style="min-width:140px; width:auto;"></div>
 
   <div id="filterMenu" class="filter-popup" onclick="event.stopPropagation()"></div>
+
+  <div id="successPopup" class="popup-modal-overlay" onclick="this.style.display='none'">
+    <div class="popup-modal-content" onclick="event.stopPropagation()">
+      <p id="successPopupMessage" style="margin:0 0 15px 0;"></p>
+      <button class="btn" onclick="document.getElementById('successPopup').style.display='none'">OK</button>
+    </div>
+  </div>
 
 <script>
   let databases = JSON.parse(localStorage.getItem("databases") || "{}");
@@ -364,17 +340,15 @@
     openDatabases();
   }
   
-  // --- Multi-Select Filter Logic ---
-  
   function getFilteredRows(filtersToApply = activeFilters) {
     const db = databases[currentDbName];
     if (!db) return [];
     
-    let filteredRows = db.rows;
+    let filteredRows = db.rows || [];
     const filterKeys = Object.keys(filtersToApply);
 
     if(filterKeys.length > 0) {
-        filteredRows = db.rows.filter(row => {
+        filteredRows = filteredRows.filter(row => {
             return filterKeys.every(colIndex => {
                 const selectedValues = filtersToApply[colIndex];
                 if (!selectedValues || selectedValues.length === 0) return true;
@@ -440,20 +414,7 @@
     });
 
     const menu = document.getElementById('filterMenu');
-    menu.innerHTML = `
-        <div class="filter-popup-header">
-            <span onclick="setAllFilterCheckboxes(true)">(Select All)</span>
-            <span onclick="setAllFilterCheckboxes(false)">(Clear All)</span>
-        </div>
-        <div class="filter-popup-search">
-            <input type="text" id="filter-search-input" onkeyup="filterMenuOptions()" placeholder="Search options...">
-        </div>
-        <div class="filter-popup-list" id="filter-options-list">${listItemsHtml}</div>
-        <div class="filter-popup-footer">
-            <button onclick="hideFilterMenu()">Cancel</button>
-            <button onclick="applyMultiSelectFilter(${columnIndex})" style="background-color:var(--accent); color:white;">Apply</button>
-        </div>
-    `;
+    menu.innerHTML = `<div class="filter-popup-header"><span onclick="setAllFilterCheckboxes(true)">(Select All)</span><span onclick="setAllFilterCheckboxes(false)">(Clear All)</span></div><div class="filter-popup-search"><input type="text" id="filter-search-input" onkeyup="filterMenuOptions()" placeholder="Search options..."></div><div class="filter-popup-list" id="filter-options-list">${listItemsHtml}</div><div class="filter-popup-footer"><button onclick="hideFilterMenu()">Cancel</button><button onclick="applyMultiSelectFilter(${columnIndex})" style="background-color:var(--accent); color:white;">Apply</button></div>`;
     
     menu.style.display = 'block';
     menu.style.left = (event.pageX - 5) + 'px';
@@ -492,7 +453,7 @@
   
   function updateFilterIcons() {
       const db = databases[currentDbName];
-      if (!db) return;
+      if (!db || !db.headers) return;
       db.headers.forEach((header, index) => {
           const icon = document.getElementById(`filter-icon-${index}`);
           if (icon) {
@@ -516,23 +477,14 @@
     const end = start + rowsPerPage;
     const paginatedRows = filteredRows.slice(start, end);
 
-    const bodyHtml = paginatedRows.map(r => `<tr>${r.map(c => `<td>${escapeHtml(String(c||''))}</td>`).join('')}</tr>`).join('');
-    document.getElementById('data-table-body').innerHTML = bodyHtml;
+    const body = document.getElementById('data-table-body');
+    if(body) body.innerHTML = paginatedRows.map(r => `<tr>${r.map(c => `<td>${escapeHtml(String(c||''))}</td>`).join('')}</tr>`).join('');
     
-    const paginationHtml = `
-        <div style="flex: 1; text-align: left;">
-            Go to page: <input type="number" min="1" max="${totalPages}" value="${page}" onchange="jumpToPage(this.value)" style="width: 60px;">
-        </div>
-        <div style="flex: 1; text-align: center;">
-            <button class="btn" onclick="renderFilteredAndPagedTable(${page - 1})" ${page === 1 ? 'disabled' : ''}>⬅ Prev</button>
-            <span style="margin:0 8px">Page ${page} of ${totalPages}</span>
-            <button class="btn" onclick="renderFilteredAndPagedTable(${page + 1})" ${page === totalPages ? 'disabled' : ''}>Next ➡</button>
-        </div>
-        <div style="flex: 1; text-align: right; font-weight: bold;" id="data-count-display">
-            Data Count: ${filteredRows.length}
-        </div>
-    `;
-    document.getElementById('pagination-container').innerHTML = `<div class="pagination">${paginationHtml}</div>`;
+    const paginationContainer = document.getElementById('pagination-container');
+    if (paginationContainer) {
+        const paginationHtml = `<div style="flex: 1; text-align: left;">Go to page: <input type="number" min="1" max="${totalPages}" value="${page}" onchange="jumpToPage(this.value)" style="width: 60px;"></div><div style="flex: 1; text-align: center;"><button class="btn" onclick="renderFilteredAndPagedTable(${page - 1})" ${page === 1 ? 'disabled' : ''}>⬅ Prev</button><span style="margin:0 8px">Page ${page} of ${totalPages}</span><button class="btn" onclick="renderFilteredAndPagedTable(${page + 1})" ${page === totalPages ? 'disabled' : ''}>Next ➡</button></div><div style="flex: 1; text-align: right; font-weight: bold;" id="data-count-display">Data Count: ${filteredRows.length}</div>`;
+        paginationContainer.innerHTML = `<div class="pagination">${paginationHtml}</div>`;
+    }
 
     updateFilterIcons();
   }
@@ -544,53 +496,56 @@
     }
   }
 
+  async function fetchAndSaveGSheet(dbName) {
+    const db = databases[dbName];
+    if (!db || !db.url) return;
+
+    db.rows = [];
+    db.headers = [];
+    
+    let csvUrl = db.url;
+    if(db.url.includes('/edit')) csvUrl = db.url.replace('/edit','/gviz/tq?tqx=out:csv');
+    else if(db.url.includes('/pub')) csvUrl = db.url.replace('/pub','/pub?output=csv');
+    
+    const r = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(csvUrl));
+    if (!r.ok) throw new Error('Network response was not ok');
+    const txt = await r.text();
+    const parsed = Papa.parse(txt, { header:true, skipEmptyLines:true });
+    db.headers = (parsed.meta.fields || []).map(f=>({name:f}));
+    db.rows = (parsed.data || []).map(row => db.headers.map(h => row[h.name] || ''));
+    databases[dbName] = db;
+    localStorage.setItem('databases', JSON.stringify(databases));
+  }
+
   async function openDatabase(dbName, forceRefresh = false){
     currentDbName = dbName;
-    if (!forceRefresh) {
-        activeFilters = {}; // Reset filters only when opening a DB, not on refresh
-    }
+    if (!forceRefresh) activeFilters = {};
     
-    const db = databases[dbName];
+    let db = databases[dbName];
     if(!db){ alert('DB not found'); return; }
 
-    // This block will now run on first open AND on manual refresh
-    if(db.type === 'gsheet' && db.url){
-      if (!db.rows || db.rows.length === 0 || forceRefresh) {
-          db.rows = [];
-          db.headers = [];
-          let csvUrl = db.url;
-          if(db.url.includes('/edit')) csvUrl = db.url.replace('/edit','/gviz/tq?tqx=out:csv');
-          else if(db.url.includes('output=csv')) csvUrl = db.url;
-          else if(db.url.includes('/pub')) csvUrl = db.url.includes('output=csv') ? db.url : db.url.replace('/pub','/pub?output=csv');
-          try{
-            const r = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(csvUrl));
-            if (!r.ok) throw new Error('Network response was not ok');
-            const txt = await r.text();
-            const parsed = Papa.parse(txt, { header:true, skipEmptyLines:true });
-            db.headers = (parsed.meta.fields || []).map(f=>({name:f}));
-            db.rows = (parsed.data || []).map(row => db.headers.map(h => row[h.name] || ''));
-            databases[dbName] = db;
-            localStorage.setItem('databases', JSON.stringify(databases));
-            if (forceRefresh) {
-                alert('Data has been refreshed successfully!');
-            }
-          }catch(e){
+    if (db.type === 'gsheet' && (!db.rows || db.rows.length === 0 || forceRefresh)) {
+        if(forceRefresh) document.getElementById('manual-refresh-btn')?.classList.add('loading');
+        try {
+            await fetchAndSaveGSheet(dbName);
+            if (forceRefresh) showSuccessPopup('Data has been refreshed successfully!');
+        } catch(e) {
             console.warn('gsheet fetch failed', e);
             alert('Failed to fetch data from Google Sheet. Check the link or network.');
-            // Don't proceed to render if fetch fails on refresh
-            if (forceRefresh) return;
-          }
-      }
+        } finally {
+            if(forceRefresh) document.getElementById('manual-refresh-btn')?.classList.remove('loading');
+        }
     }
 
-    // This part runs only on the first open, not on refresh, to avoid redrawing the whole screen
-    if (!forceRefresh) {
+    db = databases[dbName]; // Re-read db object in case it was updated
+    
+    if (!document.getElementById('data-table') || forceRefresh === false) {
         const headerHtml = (db.headers||[]).map((h, i) => `<th><div class="th-content"><span>${escapeHtml(h.name)}</span><span id="filter-icon-${i}" class="filter-icon" onclick="showFilterMenu(event, ${i})">&#9660;</span></div></th>`).join('');
         const tableHtml = `
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
             <div style="font-weight:700;">${escapeHtml(dbName)}</div>
             <div style="display:flex; gap: 10px;">
-                 <button class="btn" onclick="manualRefresh()">Manual Refresh</button>
+                 <button class="btn" id="manual-refresh-btn" onclick="manualRefresh()">Manual Refresh</button>
                  <button class="btn" onclick="scheduleRefresh()">Schedule Refresh</button>
                  <button class="btn" onclick="clearAllFilters()">Clear All Filters</button>
                  <button class="btn" onclick="openDatabases()">⬅️ Back to List</button>
@@ -606,17 +561,15 @@
             <div id="pagination-container"></div>
           </div>
         `;
-
         panelArea.innerHTML = tableHtml;
     }
     
     renderFilteredAndPagedTable(1);
   }
 
-  // --- New Refresh Functions ---
   function manualRefresh() {
       if (currentDbName) {
-          openDatabase(currentDbName, true); // Pass `true` to force a refresh
+          openDatabase(currentDbName, true);
       }
   }
 
@@ -624,11 +577,16 @@
       alert("This feature requires a backend server to run scheduled tasks even when the browser is closed. This is a planned future enhancement.");
   }
 
+  function showSuccessPopup(message) {
+      document.getElementById('successPopupMessage').textContent = message;
+      document.getElementById('successPopup').style.display = 'flex';
+  }
 
   function showMenu(ev, dbName){
     ev.stopPropagation();
     currentPopupDB = dbName;
     const menu = document.getElementById('popupMenu');
+    menu.innerHTML = `<div style="padding:8px;cursor:pointer" onclick="renameDatabase()">📝 Rename</div><div style="padding:8px;cursor:pointer" onclick="deleteDatabase()">🗑 Delete</div>`;
     menu.style.display='block';
     menu.style.left = (ev.clientX - 10) + 'px';
     menu.style.top  = (ev.clientY + 6) + 'px';

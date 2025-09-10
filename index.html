@@ -184,55 +184,6 @@
         0% { background-position: 100% 0; }
         100% { background-position: -100% 0; }
     }
-    .th-content {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    .filter-icon {
-        cursor: pointer;
-        font-size: 12px;
-        margin-left: 8px;
-        color: #555;
-    }
-    .filter-icon:hover { color: #000; }
-    .filter-icon.active-filter {
-        color: var(--accent);
-        font-weight: bold;
-    }
-    .filter-popup, .popup-modal-overlay {
-        display: none;
-        position: absolute;
-        z-index: 40;
-    }
-    .filter-popup {
-        background: #fff;
-        border: 1px solid #ccc;
-        box-shadow: 0 6px 20px rgba(0,0,0,0.15);
-        border-radius: 6px;
-        width: 240px;
-    }
-    .filter-popup-header, .filter-popup-footer {
-        padding: 8px; background-color: #f7f8fa;
-    }
-    .filter-popup-header { font-size: 13px; border-bottom: 1px solid #eee; }
-    .filter-popup-header span { cursor: pointer; color: #007bff; text-decoration: underline; margin-right: 10px; }
-    .filter-popup-footer { text-align: right; border-top: 1px solid #eee; }
-    .filter-popup-footer button { padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; margin-left: 6px; }
-    .filter-popup-search { padding: 8px; border-bottom: 1px solid #eee; }
-    .filter-popup-search input { width: 100%; padding: 6px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
-    .filter-popup-list { max-height: 200px; overflow-y: auto; }
-    .filter-popup-list label { display: block; padding: 6px 12px; cursor: pointer; font-size: 13px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px; }
-    .filter-popup-list label:hover { background-color: #f5f5f5; }
-    .filter-popup-list label:last-child { border-bottom: none; }
-    .popup-modal-overlay {
-        position: fixed; inset: 0; background: rgba(0,0,0,0.4);
-        display: flex; justify-content: center; align-items: center;
-    }
-    .popup-modal-content {
-        background: white; padding: 25px 35px; border-radius: 8px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.2); text-align: center;
-    }
   </style>
 </head>
 <body>
@@ -262,18 +213,13 @@
     </main>
 
     <div id="popupMenu" class="filter-popup" style="min-width:140px; width:auto;"></div>
-    <div id="filterMenu" class="filter-popup" onclick="event.stopPropagation()"></div>
-    <div id="successPopup" class="popup-modal-overlay" onclick="this.style.display='none'">
-        <div class="popup-modal-content" onclick="event.stopPropagation()">
-          <p id="successPopupMessage" style="margin:0 0 15px 0;"></p>
-          <button class="btn" onclick="document.getElementById('successPopup').style.display='none'">OK</button>
-        </div>
-    </div>
   </div>
 
 <script type="module">
+    // Firebase Imports
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
      {
 
@@ -293,13 +239,10 @@
 
   }
     const firebaseConfig = {
-      // Example:
-      // apiKey: "AIzaSy...",
-      // authDomain: "your-project-id.firebaseapp.com",
-      // projectId: "your-project-id",
-      // storageBucket: "your-project-id.appspot.com",
-      // messagingSenderId: "...",
-      // appId: "..."
+      // apiKey: "...",
+      // authDomain: "...",
+      // projectId: "...",
+      // etc.
     };
 
     // --- DO NOT EDIT BELOW THIS LINE ---
@@ -307,6 +250,7 @@
     // Initialize Firebase
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
+    const db = getFirestore(app);
     const provider = new GoogleAuthProvider();
 
     const loginContainer = document.getElementById('login-container');
@@ -317,9 +261,8 @@
     const hero = document.getElementById('hero');
     const panelArea = document.getElementById('panelArea');
 
-    let databases = JSON.parse(localStorage.getItem("databases") || "{}");
+    let localDatabases = {}; // In-memory cache
     let currentDbName = null;
-    let activeFilters = {};
     let currentPopupDB = null;
 
     loginBtn.addEventListener('click', () => {
@@ -365,23 +308,32 @@
         panelArea.innerHTML = `<div style="font-weight:700;margin-bottom:10px">Forms</div><div style="background:#fff;padding:12px;border-radius:8px">Forms functionality will go here.</div>`;
     }
 
-    function renderDbList(searchTerm = ''){
-        const all = Object.keys(databases).filter(n => n.toLowerCase().includes((searchTerm||'').toLowerCase()));
-        const total = all.length;
-        const listHtml = all.length ? all.map(name => `<div class="db-item"><div style="margin-right:10px;cursor:pointer" onclick="showMenu(event, '${escapeJs(name)}')">⋮</div><div style="flex:1;cursor:pointer" onclick="openDatabase('${escapeJs(name)}')">📊 ${escapeHtml(name)}</div></div>`).join('') : `<div style="padding:12px;background:#fff;border-radius:6px">No databases found.</div>`;
-        document.getElementById('db-list-container').innerHTML = `<div class="db-list">${listHtml}</div>`;
+    async function renderDbList(searchTerm = ''){
+        const querySnapshot = await getDocs(collection(db, "databases"));
+        let dbNames = [];
+        querySnapshot.forEach((doc) => {
+            dbNames.push(doc.id);
+        });
+
+        const filteredNames = dbNames.filter(n => n.toLowerCase().includes((searchTerm||'').toLowerCase()));
+        const total = filteredNames.length;
+        const listHtml = total > 0 ? filteredNames.map(name => `<div class="db-item"><div style="margin-right:10px;cursor:pointer" onclick="showMenu(event, '${escapeJs(name)}')">⋮</div><div style="flex:1;cursor:pointer" onclick="openDatabase('${escapeJs(name)}')">📊 ${escapeHtml(name)}</div></div>`).join('') : `<div style="padding:12px;background:#fff;border-radius:6px">No databases found.</div>`;
+        
+        const listContainer = document.getElementById('db-list-container');
+        if (listContainer) listContainer.innerHTML = `<div class="db-list">${listHtml}</div>`;
+        
         const totalElem = document.getElementById('db-total-count');
         if(totalElem) totalElem.textContent = `Total Count: ${total}`;
     }
 
-    function openDatabases(){
+    async function openDatabases(){
         hero.innerHTML = '';
         hero.style.display = 'none';
         panelArea.style.display = 'block';
-        let structureHtml = `<div class="db-header"><div style="display:flex;align-items:center;gap:12px"><div style="display:flex; align-items:center; gap: 8px;"><input id="dbSearchInput" placeholder="Search Database" value=""><button class="btn" onclick="clearSearch()">Clear</button></div><div id="db-total-count" style="font-size:13px; color:#666; text-transform: uppercase; font-weight: bold;"></div></div><div><button class="btn" onclick="showImportForm()">➕ Add Database</button></div></div><div id="db-list-container"></div>`;
+        let structureHtml = `<div class="db-header"><div style="display:flex;align-items:center;gap:12px"><div style="display:flex; align-items:center; gap: 8px;"><input id="dbSearchInput" placeholder="Search Database" value=""><button class="btn" onclick="clearSearch()">Clear</button></div><div id="db-total-count" style="font-size:13px; color:#666; text-transform: uppercase; font-weight: bold;"></div></div><div><button class="btn" onclick="showImportForm()">➕ Add Database</button></div></div><div id="db-list-container">Loading databases...</div>`;
         panelArea.innerHTML = structureHtml;
         document.getElementById('dbSearchInput').addEventListener('input', (e) => { renderDbList(e.target.value); });
-        renderDbList('');
+        await renderDbList('');
     }
 
     function clearSearch() {
@@ -403,182 +355,54 @@
         if(!fi || !fi.files || !fi.files.length){ status.textContent = '⚠️ Select a CSV file'; return; }
         const file = fi.files[0], dbName = file.name.replace(/\.csv$/i,'') || ('csvdb_' + Date.now());
         status.textContent = '⏳ Parsing...';
+        
         Papa.parse(file, {
-        header:true, skipEmptyLines:true, complete(res){
-            databases[dbName] = { type:'csv', headers: (res.meta.fields || []).map(h => ({name:h})), rows: (res.data || []).map(r => (res.meta.fields || []).map(f => r[f] || '')) };
-            localStorage.setItem('databases', JSON.stringify(databases));
-            openDatabases();
-        },
-        error(err){ status.textContent = '❌ Failed: ' + (err.message || 'parse error'); }
-        });
-    }
-    
-    function getFilteredRows(filtersToApply = activeFilters) {
-        const db = databases[currentDbName];
-        if (!db || !db.rows) return [];
-        let filteredRows = db.rows;
-        const filterKeys = Object.keys(filtersToApply);
+            header:true, skipEmptyLines:true, async complete(res){
+                const headers = (res.meta.fields || []).map(h => ({name:h}));
+                const rows = (res.data || []).map(r => (res.meta.fields || []).map(f => r[f] || ''));
+                
+                const dbData = {
+                    headers: headers,
+                    rows: rows,
+                    createdAt: new Date().toISOString()
+                };
 
-        if(filterKeys.length > 0) {
-            filteredRows = filteredRows.filter(row => {
-                return filterKeys.every(colIndex => {
-                    const selectedValues = filtersToApply[colIndex];
-                    if (!selectedValues || selectedValues.length === 0) return true;
-                    return selectedValues.includes(String(row[colIndex]));
-                });
-            });
-        }
-        return filteredRows;
-    }
-
-    function filterMenuOptions() {
-        const searchTerm = document.getElementById('filter-search-input').value.toLowerCase();
-        const options = document.querySelectorAll('#filter-options-list label');
-        options.forEach(option => {
-            const text = option.textContent.toLowerCase();
-            option.style.display = text.includes(searchTerm) ? 'flex' : 'none';
-        });
-    }
-    
-    function setAllFilterCheckboxes(isChecked) {
-        const checkboxes = document.querySelectorAll('#filter-options-list .filter-option-cb');
-        checkboxes.forEach(cb => {
-            if (cb.parentElement.style.display !== 'none') {
-                cb.checked = isChecked;
-            }
-        });
-    }
-
-    function showFilterMenu(event, columnIndex) {
-        event.stopPropagation();
-        hideFilterMenu();
-        const db = databases[currentDbName];
-        if (!db) return;
-        
-        const tempFilters = { ...activeFilters };
-        delete tempFilters[columnIndex];
-        const relevantRows = getFilteredRows(tempFilters);
-
-        const uniqueValues = new Set();
-        relevantRows.forEach(row => {
-            if(row[columnIndex] !== '' && row[columnIndex] !== null) uniqueValues.add(row[columnIndex]);
-        });
-        
-        const currentSelection = new Set(activeFilters[columnIndex] || []);
-        let sortedValues = [...uniqueValues];
-
-        if (currentSelection.size > 0) {
-            sortedValues.sort((a, b) => {
-                const aIsSelected = currentSelection.has(a);
-                const bIsSelected = currentSelection.has(b);
-                if (aIsSelected && !bIsSelected) return -1;
-                if (!aIsSelected && bIsSelected) return 1;
-                return String(a).localeCompare(String(b));
-            });
-        } else {
-            sortedValues.sort((a,b) => String(a).localeCompare(String(b)));
-        }
-        
-        let listItemsHtml = '';
-        sortedValues.forEach(value => {
-            const isChecked = currentSelection.size === 0 || currentSelection.has(value);
-            listItemsHtml += `<label><input type="checkbox" class="filter-option-cb" value="${escapeHtml(value)}" ${isChecked ? 'checked' : ''}> ${escapeHtml(value)}</label>`;
-        });
-
-        const menu = document.getElementById('filterMenu');
-        menu.innerHTML = `<div class="filter-popup-header"><span onclick="setAllFilterCheckboxes(true)">(Select All)</span><span onclick="setAllFilterCheckboxes(false)">(Clear All)</span></div><div class="filter-popup-search"><input type="text" id="filter-search-input" onkeyup="filterMenuOptions()" placeholder="Search options..."></div><div class="filter-popup-list" id="filter-options-list">${listItemsHtml}</div><div class="filter-popup-footer"><button onclick="hideFilterMenu()">Cancel</button><button onclick="applyMultiSelectFilter(${columnIndex})" style="background-color:var(--accent); color:white;">Apply</button></div>`;
-        
-        menu.style.display = 'block';
-        menu.style.left = (event.pageX - 5) + 'px';
-        menu.style.top = (event.pageY + 10) + 'px';
-        document.getElementById('filter-search-input').focus();
-    }
-
-    function applyMultiSelectFilter(columnIndex) {
-        const selectedValues = [];
-        document.querySelectorAll('#filter-options-list .filter-option-cb:checked').forEach(cb => {
-            selectedValues.push(cb.value);
-        });
-
-        const allValuesInMenu = [];
-        document.querySelectorAll('#filter-options-list .filter-option-cb').forEach(cb => {
-            allValuesInMenu.push(cb.value);
-        });
-
-        if (selectedValues.length === allValuesInMenu.length || selectedValues.length === 0) {
-            delete activeFilters[columnIndex];
-        } else {
-            activeFilters[columnIndex] = selectedValues;
-        }
-        renderFilteredAndPagedTable(1);
-        hideFilterMenu();
-    }
-    
-    function hideFilterMenu() {
-        document.getElementById('filterMenu').style.display = 'none';
-    }
-    
-    function clearAllFilters() {
-        activeFilters = {};
-        renderFilteredAndPagedTable(1);
-    }
-    
-    function updateFilterIcons() {
-        const db = databases[currentDbName];
-        if (!db || !db.headers) return;
-        db.headers.forEach((header, index) => {
-            const icon = document.getElementById(`filter-icon-${index}`);
-            if (icon) {
-                if (activeFilters[index] && activeFilters[index].length > 0) {
-                    icon.classList.add('active-filter');
-                } else {
-                    icon.classList.remove('active-filter');
+                try {
+                    status.textContent = '⏳ Uploading to Firebase...';
+                    await setDoc(doc(db, "databases", dbName), dbData);
+                    status.textContent = `✅ Imported "${dbName}" successfully!`;
+                    await openDatabases();
+                } catch(e) {
+                    console.error("Error writing document: ", e);
+                    status.textContent = '❌ Failed to save to Firebase.';
                 }
-            }
+            },
+            error(err){ status.textContent = '❌ Failed to parse file.'; }
         });
     }
-  
-    function renderFilteredAndPagedTable(page = 1) {
-        const filteredRows = getFilteredRows();
-        const rowsPerPage = 100;
-        
-        const totalPages = Math.max(1, Math.ceil(filteredRows.length / rowsPerPage));
-        page = Math.min(Math.max(1, page), totalPages);
-        
-        const start = (page - 1) * rowsPerPage;
-        const end = start + rowsPerPage;
-        const paginatedRows = filteredRows.slice(start, end);
-
-        const body = document.getElementById('data-table-body');
-        if(body) body.innerHTML = paginatedRows.map(r => `<tr>${r.map(c => `<td>${escapeHtml(String(c||''))}</td>`).join('')}</tr>`).join('');
-        
-        const paginationContainer = document.getElementById('pagination-container');
-        if (paginationContainer) {
-            const paginationHtml = `<div style="flex: 1; text-align: left;">Go to page: <input type="number" min="1" max="${totalPages}" value="${page}" onchange="jumpToPage(this.value)" style="width: 60px;"></div><div style="flex: 1; text-align: center;"><button class="btn" onclick="renderFilteredAndPagedTable(${page - 1})" ${page === 1 ? 'disabled' : ''}>⬅ Prev</button><span style="margin:0 8px">Page ${page} of ${totalPages}</span><button class="btn" onclick="renderFilteredAndPagedTable(${page + 1})" ${page === totalPages ? 'disabled' : ''}>Next ➡</button></div><div style="flex: 1; text-align: right; font-weight: bold;" id="data-count-display">Data Count: ${filteredRows.length}</div>`;
-            paginationContainer.innerHTML = `<div class="pagination">${paginationHtml}</div>`;
-        }
-        updateFilterIcons();
-    }
-
-    function jumpToPage(value) {
-        const pageNum = parseInt(value);
-        if (pageNum && pageNum > 0) {
-            renderFilteredAndPagedTable(pageNum);
-        }
-    }
-
+    
     async function openDatabase(dbName){
+        panelArea.innerHTML = `<h2>Loading data, please wait...</h2>`;
         currentDbName = dbName;
-        activeFilters = {};
-        let db = databases[dbName];
-        if(!db){ alert('DB not found'); return; }
         
-        const headerHtml = (db.headers||[]).map((h, i) => `<th><div class="th-content"><span>${escapeHtml(h.name)}</span><span id="filter-icon-${i}" class="filter-icon" onclick="showFilterMenu(event, ${i})">&#9660;</span></div></th>`).join('');
+        const docRef = doc(db, "databases", dbName);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+            localDatabases[dbName] = docSnap.data();
+        } else {
+            alert("Error: Database not found in Firestore.");
+            openDatabases();
+            return;
+        }
+
+        const currentDB = localDatabases[dbName];
+        
+        const headerHtml = (currentDB.headers||[]).map((h, i) => `<th><div class="th-content"><span>${escapeHtml(h.name)}</span></div></th>`).join('');
         const tableHtml = `
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
             <div style="font-weight:700;">${escapeHtml(dbName)}</div>
             <div style="display:flex; gap: 10px;">
-                 <button class="btn" onclick="clearAllFilters()">Clear All Filters</button>
                  <button class="btn" onclick="openDatabases()">⬅️ Back to List</button>
             </div>
           </div>
@@ -595,6 +419,39 @@
         panelArea.innerHTML = tableHtml;
         renderFilteredAndPagedTable(1);
     }
+    
+    function getFilteredRows() {
+        const dbData = localDatabases[currentDbName];
+        if (!dbData || !dbData.rows) return [];
+        return dbData.rows;
+    }
+
+    function renderFilteredAndPagedTable(page = 1) {
+        const filteredRows = getFilteredRows();
+        const rowsPerPage = 100;
+        const totalPages = Math.max(1, Math.ceil(filteredRows.length / rowsPerPage));
+        page = Math.min(Math.max(1, page), totalPages);
+        
+        const start = (page - 1) * rowsPerPage;
+        const end = start + rowsPerPage;
+        const paginatedRows = filteredRows.slice(start, end);
+
+        const body = document.getElementById('data-table-body');
+        if(body) body.innerHTML = paginatedRows.map(r => `<tr>${r.map(c => `<td>${escapeHtml(String(c||''))}</td>`).join('')}</tr>`).join('');
+        
+        const paginationContainer = document.getElementById('pagination-container');
+        if (paginationContainer) {
+            const paginationHtml = `<div style="flex: 1; text-align: left;">Go to page: <input type="number" min="1" max="${totalPages}" value="${page}" onchange="jumpToPage(this.value)" style="width: 60px;"></div><div style="flex: 1; text-align: center;"><button class="btn" onclick="renderFilteredAndPagedTable(${page - 1})" ${page === 1 ? 'disabled' : ''}>⬅ Prev</button><span style="margin:0 8px">Page ${page} of ${totalPages}</span><button class="btn" onclick="renderFilteredAndPagedTable(${page + 1})" ${page === totalPages ? 'disabled' : ''}>Next ➡</button></div><div style="flex: 1; text-align: right; font-weight: bold;" id="data-count-display">Data Count: ${filteredRows.length}</div>`;
+            paginationContainer.innerHTML = `<div class="pagination">${paginationHtml}</div>`;
+        }
+    }
+    
+    function jumpToPage(value) {
+        const pageNum = parseInt(value);
+        if (pageNum && pageNum > 0) {
+            renderFilteredAndPagedTable(pageNum);
+        }
+    }
 
     function showMenu(ev, dbName){
         ev.stopPropagation();
@@ -606,30 +463,28 @@
         menu.style.top  = (ev.clientY + 6) + 'px';
     }
     document.addEventListener('click', ()=> {
-        document.getElementById('popupMenu').style.display='none'
-        hideFilterMenu();
+        const menu = document.getElementById('popupMenu');
+        if(menu) menu.style.display='none';
     });
 
     function renameDatabase(){
-        const newName = prompt('Enter new name for database', currentPopupDB);
-        if(!newName) return;
-        if(databases[newName]){ alert('Name already exists'); return; }
-        databases[newName] = databases[currentPopupDB];
-        delete databases[currentPopupDB];
-        localStorage.setItem('databases', JSON.stringify(databases));
-        openDatabases();
+        alert("This feature needs to be updated for Firestore.");
     }
-    function deleteDatabase(){
-        if(!confirm('Delete database "'+currentPopupDB+'" ?')) return;
-        delete databases[currentPopupDB];
-        localStorage.setItem('databases', JSON.stringify(databases));
-        openDatabases();
+    async function deleteDatabase(){
+        if(!confirm('Delete database "' + currentPopupDB + '" from Firebase?')) return;
+        try {
+            await deleteDoc(doc(db, "databases", currentPopupDB));
+            alert('Database deleted successfully.');
+            openDatabases();
+        } catch (e) {
+            console.error("Error deleting document: ", e);
+            alert("Failed to delete database.");
+        }
     }
 
     function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
     function escapeJs(s){ return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'\\"'); }
 
-    // Make functions globally accessible for inline onclicks
     window.goHome = goHome;
     window.openDatabases = openDatabases;
     window.openForms = openForms;
@@ -642,12 +497,7 @@
     window.deleteDatabase = deleteDatabase;
     window.jumpToPage = jumpToPage;
     window.renderFilteredAndPagedTable = renderFilteredAndPagedTable;
-    window.clearAllFilters = clearAllFilters;
-    window.showFilterMenu = showFilterMenu;
-    window.setAllFilterCheckboxes = setAllFilterCheckboxes;
-    window.filterMenuOptions = filterMenuOptions;
-    window.hideFilterMenu = hideFilterMenu;
-    window.applyMultiSelectFilter = applyMultiSelectFilter;
 </script>
+
 </body>
 </html>

@@ -520,17 +520,17 @@
     document.getElementById('data-table-body').innerHTML = bodyHtml;
     
     const paginationHtml = `
-        <div style="flex: 1; text-align: left;">
-            Go to page: <input type="number" min="1" max="${totalPages}" value="${page}" onchange="jumpToPage(this.value)" style="width: 60px;">
-        </div>
-        <div style="flex: 1; text-align: center;">
-            <button class="btn" onclick="renderFilteredAndPagedTable(${page - 1})" ${page === 1 ? 'disabled' : ''}>⬅ Prev</button>
-            <span style="margin:0 8px">Page ${page} of ${totalPages}</span>
-            <button class="btn" onclick="renderFilteredAndPagedTable(${page + 1})" ${page === totalPages ? 'disabled' : ''}>Next ➡</button>
-        </div>
-        <div style="flex: 1; text-align: right; font-weight: bold;" id="data-count-display">
-            Data Count: ${filteredRows.length}
-        </div>
+      <div style="flex: 1 1 0%; text-align: left;">
+        Go to page: <input type="number" min="1" max="${totalPages}" value="${page}" onchange="jumpToPage(this.value)" style="width: 60px;">
+      </div>
+      <div style="flex: 1 1 0%; text-align: center;">
+        <button class="btn" onclick="renderFilteredAndPagedTable(${page - 1})" ${page === 1 ? 'disabled' : ''}>⬅ Prev</button>
+        <span style="margin:0 8px">Page ${page} of ${totalPages}</span>
+        <button class="btn" onclick="renderFilteredAndPagedTable(${page + 1})" ${page === totalPages ? 'disabled' : ''}>Next ➡</button>
+      </div>
+      <div style="flex: 1 1 0%; text-align: right; font-weight: bold;" id="data-count-display">
+        Data Count: ${filteredRows.length}
+      </div>
     `;
     document.getElementById('pagination-container').innerHTML = `<div class="pagination">${paginationHtml}</div>`;
 
@@ -551,6 +551,9 @@
     if(!db){ alert('DB not found'); return; }
 
     if(db.type === 'gsheet' && db.url){
+      // THIS IS THE CORRECTED GSHEET FETCH LOGIC
+      db.rows = [];
+      db.headers = [];
       let csvUrl = db.url;
       if(db.url.includes('/edit')) csvUrl = db.url.replace('/edit','/gviz/tq?tqx=out:csv');
       else if(db.url.includes('output=csv')) csvUrl = db.url;
@@ -559,8 +562,8 @@
         const r = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(csvUrl));
         const txt = await r.text();
         const parsed = Papa.parse(txt, { header:true, skipEmptyLines:true });
-        db.headers = parsed.meta.fields.map(f=>({name:f}));
-        db.rows = parsed.data.map(row => db.headers.map(h => row[h.name] || ''));
+        db.headers = (parsed.meta.fields || []).map(f=>({name:f}));
+        db.rows = (parsed.data || []).map(row => db.headers.map(h => row[h.name] || ''));
         databases[dbName] = db;
         localStorage.setItem('databases', JSON.stringify(databases));
       }catch(e){

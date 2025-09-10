@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Laser Matrix — 3D Header + Video Background</title>
+  <title>Laser Matrix</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 
@@ -43,6 +43,14 @@
       transform: translateY(1px);
     }
     .sidebar .spacer{flex-grow:1}
+    #user-info {
+        font-size: 12px;
+        text-align: center;
+        padding: 8px;
+        background: rgba(0,0,0,0.1);
+        border-radius: 6px;
+        word-break: break-all;
+    }
     .main {
       flex:1;
       position:relative;
@@ -135,9 +143,10 @@
     .pagination{
         margin-top:12px;
         display: flex;
-        justify-content: space-between;
+        justify-content: center;
         align-items: center;
         font-size: 13px;
+        gap: 15px;
     }
     .btn{
       position: relative;
@@ -228,409 +237,417 @@
 </head>
 <body>
 
-  <aside class="sidebar" role="navigation" aria-label="Main menu">
-    <h2>📂 Menu</h2>
-    <button onclick="goHome()">🏠 Home</button>
-    <button onclick="openDatabases()">📊 Databases</button>
-    <button onclick="openForms()">📝 Forms</button>
-    <div class="spacer"></div>
-  </aside>
+  <div id="login-container" style="display: flex; justify-content: center; align-items: center; height: 100vh; width: 100%; flex-direction: column; background-color: var(--dark);">
+    <h1 style="color: white; font-weight: 300;">Welcome to Laser Matrix</h1>
+    <p style="color: #bdc3c7;">Please sign in to continue</p>
+    <button id="login-btn" class="btn" style="background-color: var(--accent); font-size: 16px;">
+      Sign in with Google
+    </button>
+  </div>
 
-  <main class="main" id="main">
-    <section class="hero" id="hero">
-      </section>
+  <div id="app-container" style="display: none; width:100%; height:100%; flex-shrink: 0; flex-grow: 1;">
+    <aside class="sidebar" role="navigation" aria-label="Main menu">
+      <h2>📂 Menu</h2>
+      <button onclick="goHome()">🏠 Home</button>
+      <button onclick="openDatabases()">📊 Databases</button>
+      <button onclick="openForms()">📝 Forms</button>
+      <div class="spacer"></div>
+      <div id="user-info">Not signed in</div>
+      <button id="logout-btn">🚪 Sign Out</button>
+    </aside>
 
-    <section id="panelArea" class="panel" aria-live="polite" style="display:none;">
-      </section>
-  </main>
+    <main class="main" id="main">
+      <section class="hero" id="hero"></section>
+      <section id="panelArea" class="panel" aria-live="polite" style="display:none;"></section>
+    </main>
 
-  <div id="popupMenu" class="filter-popup" style="min-width:140px; width:auto;"></div>
-
-  <div id="filterMenu" class="filter-popup" onclick="event.stopPropagation()"></div>
-
-  <div id="successPopup" class="popup-modal-overlay" onclick="this.style.display='none'">
-    <div class="popup-modal-content" onclick="event.stopPropagation()">
-      <p id="successPopupMessage" style="margin:0 0 15px 0;"></p>
-      <button class="btn" onclick="document.getElementById('successPopup').style.display='none'">OK</button>
+    <div id="popupMenu" class="filter-popup" style="min-width:140px; width:auto;"></div>
+    <div id="filterMenu" class="filter-popup" onclick="event.stopPropagation()"></div>
+    <div id="successPopup" class="popup-modal-overlay" onclick="this.style.display='none'">
+        <div class="popup-modal-content" onclick="event.stopPropagation()">
+          <p id="successPopupMessage" style="margin:0 0 15px 0;"></p>
+          <button class="btn" onclick="document.getElementById('successPopup').style.display='none'">OK</button>
+        </div>
     </div>
   </div>
 
-<script>
-  let databases = JSON.parse(localStorage.getItem("databases") || "{}");
-  const hero = document.getElementById('hero');
-  const panelArea = document.getElementById('panelArea');
-  let currentPopupDB = null;
-  let currentDbName = null;
-  let activeFilters = {};
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-  function renderHeroOverlay(){
-    return `<div class="overlay-top" aria-hidden="true"><div class="sub-title">WELCOME TO</div><div class="three-d" data-text="LASER MATRIX">LASER MATRIX</div></div>`;
-  }
+     {
 
-  function goHome(){
-    panelArea.style.display = 'none';
-    hero.style.display = '';
-    hero.innerHTML = `<video autoplay muted loop playsinline><source src="https://laserpowerinfra.com/frontassets/img/slider/Banner_v04_HD_L.mp4" type="video/mp4">Your browser does not support the video tag.</video>${renderHeroOverlay()}`;
-  }
+    apiKey: "AIzaSyCmKA2ckvZ43rc30--fjgfn7klrMufghR0",
 
-  function openForms(){
-    hero.innerHTML = '';
-    hero.style.display = 'none';
-    panelArea.style.display = 'block';
-    panelArea.innerHTML = `<div style="font-weight:700;margin-bottom:10px">Forms</div><div style="background:#fff;padding:12px;border-radius:8px">Forms functionality will go here.</div>`;
-  }
+    authDomain: "laser-matrix.firebaseapp.com",
 
-  function renderDbList(searchTerm = ''){
-    const all = Object.keys(databases).filter(n => n.toLowerCase().includes((searchTerm||'').toLowerCase()));
-    const total = all.length;
-    const listHtml = all.length ? all.map(name => `<div class="db-item"><div style="margin-right:10px;cursor:pointer" onclick="showMenu(event, '${escapeJs(name)}')">⋮</div><div style="flex:1;cursor:pointer" onclick="openDatabase('${escapeJs(name)}')">📊 ${escapeHtml(name)}</div></div>`).join('') : `<div style="padding:12px;background:#fff;border-radius:6px">No databases found.</div>`;
-    document.getElementById('db-list-container').innerHTML = `<div class="db-list">${listHtml}</div>`;
-    const totalElem = document.getElementById('db-total-count');
-    if(totalElem) totalElem.textContent = `Total Count: ${total}`;
-  }
+    projectId: "laser-matrix",
 
-  function openDatabases(){
-    hero.innerHTML = '';
-    hero.style.display = 'none';
-    panelArea.style.display = 'block';
-    let structureHtml = `<div class="db-header"><div style="display:flex;align-items:center;gap:12px"><div style="display:flex; align-items:center; gap: 8px;"><input id="dbSearchInput" placeholder="Search Database" value=""><button class="btn" onclick="clearSearch()">Clear</button></div><div id="db-total-count" style="font-size:13px; color:#666; text-transform: uppercase; font-weight: bold;"></div></div><div><button class="btn" onclick="showImportForm()">➕ Add Database</button></div></div><div id="db-list-container"></div>`;
-    panelArea.innerHTML = structureHtml;
-    document.getElementById('dbSearchInput').addEventListener('input', (e) => { renderDbList(e.target.value); });
-    renderDbList('');
-  }
+    storageBucket: "laser-matrix.firebasestorage.app",
 
-  function clearSearch() {
-      const input = document.getElementById('dbSearchInput');
-      if (input) { input.value = ''; }
-      renderDbList('');
-  }
+    messagingSenderId: "246061144480",
 
-  function showImportForm(){
-    hero.innerHTML = '';
-    hero.style.display = 'none';
-    panelArea.style.display = 'block';
-    panelArea.innerHTML = `<div style="font-weight:700;margin-bottom:12px">Add Database</div><div style="background:#fff;padding:12px;border-radius:8px"><div style="margin-bottom:12px"><label><strong>From CSV File</strong></label><br><input type="file" id="csvFile" accept=".csv"><button class="btn" style="margin-left:8px" onclick="importCSV()">Upload</button></div><div><label><strong>From Google Sheet URL</strong></label><br><input type="text" id="sheetUrl" placeholder="Paste Google Sheet link here" style="width:60%"><button class="btn" onclick="importGoogleSheet()">Add</button><div id="statusBox" style="margin-top:8px"></div></div></div>`;
-  }
+    appId: "1:246061144480:web:7905774954b025114e6cc5",
 
-  function importCSV(){
-    const fi = document.getElementById('csvFile'), status = document.getElementById('statusBox');
-    status.textContent = '';
-    if(!fi || !fi.files || !fi.files.length){ status.textContent = '⚠️ Select a CSV file'; return; }
-    const file = fi.files[0], dbName = file.name.replace(/\.csv$/i,'') || ('csvdb_' + Date.now());
-    status.textContent = '⏳ Parsing...';
-    Papa.parse(file, {
-      header:true, skipEmptyLines:true, complete(res){
-        databases[dbName] = { type:'csv', headers: (res.meta.fields || []).map(h => ({name:h})), rows: (res.data || []).map(r => (res.meta.fields || []).map(f => r[f] || '')) };
+    measurementId: "G-WKY8C6KRZK"
+
+  }
+    const firebaseConfig = {
+      // Example:
+      // apiKey: "AIzaSy...",
+      // authDomain: "your-project-id.firebaseapp.com",
+      // projectId: "your-project-id",
+      // storageBucket: "your-project-id.appspot.com",
+      // messagingSenderId: "...",
+      // appId: "..."
+    };
+
+    // --- DO NOT EDIT BELOW THIS LINE ---
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
+
+    const loginContainer = document.getElementById('login-container');
+    const appContainer = document.getElementById('app-container');
+    const loginBtn = document.getElementById('login-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+    const userInfoDiv = document.getElementById('user-info');
+    const hero = document.getElementById('hero');
+    const panelArea = document.getElementById('panelArea');
+
+    let databases = JSON.parse(localStorage.getItem("databases") || "{}");
+    let currentDbName = null;
+    let activeFilters = {};
+    let currentPopupDB = null;
+
+    loginBtn.addEventListener('click', () => {
+        signInWithPopup(auth, provider).catch(error => {
+            console.error("Authentication Error: ", error);
+            alert("Could not sign in. Please try again.");
+        });
+    });
+
+    logoutBtn.addEventListener('click', () => {
+        signOut(auth).catch(error => {
+            console.error("Sign Out Error: ", error);
+        });
+    });
+
+    onAuthStateChanged(auth, user => {
+        if (user) {
+            loginContainer.style.display = 'none';
+            appContainer.style.display = 'flex';
+            userInfoDiv.textContent = user.email;
+            goHome(); 
+        } else {
+            loginContainer.style.display = 'flex';
+            appContainer.style.display = 'none';
+            userInfoDiv.textContent = 'Not signed in';
+        }
+    });
+    
+    function renderHeroOverlay(){
+        return `<div class="overlay-top" aria-hidden="true"><div class="sub-title">WELCOME TO</div><div class="three-d" data-text="LASER MATRIX">LASER MATRIX</div></div>`;
+    }
+
+    function goHome(){
+        panelArea.style.display = 'none';
+        hero.style.display = '';
+        hero.innerHTML = `<video autoplay muted loop playsinline><source src="https://laserpowerinfra.com/frontassets/img/slider/Banner_v04_HD_L.mp4" type="video/mp4">Your browser does not support the video tag.</video>${renderHeroOverlay()}`;
+    }
+
+    function openForms(){
+        hero.innerHTML = '';
+        hero.style.display = 'none';
+        panelArea.style.display = 'block';
+        panelArea.innerHTML = `<div style="font-weight:700;margin-bottom:10px">Forms</div><div style="background:#fff;padding:12px;border-radius:8px">Forms functionality will go here.</div>`;
+    }
+
+    function renderDbList(searchTerm = ''){
+        const all = Object.keys(databases).filter(n => n.toLowerCase().includes((searchTerm||'').toLowerCase()));
+        const total = all.length;
+        const listHtml = all.length ? all.map(name => `<div class="db-item"><div style="margin-right:10px;cursor:pointer" onclick="showMenu(event, '${escapeJs(name)}')">⋮</div><div style="flex:1;cursor:pointer" onclick="openDatabase('${escapeJs(name)}')">📊 ${escapeHtml(name)}</div></div>`).join('') : `<div style="padding:12px;background:#fff;border-radius:6px">No databases found.</div>`;
+        document.getElementById('db-list-container').innerHTML = `<div class="db-list">${listHtml}</div>`;
+        const totalElem = document.getElementById('db-total-count');
+        if(totalElem) totalElem.textContent = `Total Count: ${total}`;
+    }
+
+    function openDatabases(){
+        hero.innerHTML = '';
+        hero.style.display = 'none';
+        panelArea.style.display = 'block';
+        let structureHtml = `<div class="db-header"><div style="display:flex;align-items:center;gap:12px"><div style="display:flex; align-items:center; gap: 8px;"><input id="dbSearchInput" placeholder="Search Database" value=""><button class="btn" onclick="clearSearch()">Clear</button></div><div id="db-total-count" style="font-size:13px; color:#666; text-transform: uppercase; font-weight: bold;"></div></div><div><button class="btn" onclick="showImportForm()">➕ Add Database</button></div></div><div id="db-list-container"></div>`;
+        panelArea.innerHTML = structureHtml;
+        document.getElementById('dbSearchInput').addEventListener('input', (e) => { renderDbList(e.target.value); });
+        renderDbList('');
+    }
+
+    function clearSearch() {
+        const input = document.getElementById('dbSearchInput');
+        if (input) { input.value = ''; }
+        renderDbList('');
+    }
+
+    function showImportForm(){
+        hero.innerHTML = '';
+        hero.style.display = 'none';
+        panelArea.style.display = 'block';
+        panelArea.innerHTML = `<div style="font-weight:700;margin-bottom:12px">Add Database</div><div style="background:#fff;padding:12px;border-radius:8px"><div style="margin-bottom:12px"><label><strong>From CSV File</strong></label><br><input type="file" id="csvFile" accept=".csv"><button class="btn" style="margin-left:8px" onclick="importCSV()">Upload</button></div><div id="statusBox" style="margin-top:8px"></div></div>`;
+    }
+
+    function importCSV(){
+        const fi = document.getElementById('csvFile'), status = document.getElementById('statusBox');
+        status.textContent = '';
+        if(!fi || !fi.files || !fi.files.length){ status.textContent = '⚠️ Select a CSV file'; return; }
+        const file = fi.files[0], dbName = file.name.replace(/\.csv$/i,'') || ('csvdb_' + Date.now());
+        status.textContent = '⏳ Parsing...';
+        Papa.parse(file, {
+        header:true, skipEmptyLines:true, complete(res){
+            databases[dbName] = { type:'csv', headers: (res.meta.fields || []).map(h => ({name:h})), rows: (res.data || []).map(r => (res.meta.fields || []).map(f => r[f] || '')) };
+            localStorage.setItem('databases', JSON.stringify(databases));
+            openDatabases();
+        },
+        error(err){ status.textContent = '❌ Failed: ' + (err.message || 'parse error'); }
+        });
+    }
+    
+    function getFilteredRows(filtersToApply = activeFilters) {
+        const db = databases[currentDbName];
+        if (!db || !db.rows) return [];
+        let filteredRows = db.rows;
+        const filterKeys = Object.keys(filtersToApply);
+
+        if(filterKeys.length > 0) {
+            filteredRows = filteredRows.filter(row => {
+                return filterKeys.every(colIndex => {
+                    const selectedValues = filtersToApply[colIndex];
+                    if (!selectedValues || selectedValues.length === 0) return true;
+                    return selectedValues.includes(String(row[colIndex]));
+                });
+            });
+        }
+        return filteredRows;
+    }
+
+    function filterMenuOptions() {
+        const searchTerm = document.getElementById('filter-search-input').value.toLowerCase();
+        const options = document.querySelectorAll('#filter-options-list label');
+        options.forEach(option => {
+            const text = option.textContent.toLowerCase();
+            option.style.display = text.includes(searchTerm) ? 'flex' : 'none';
+        });
+    }
+    
+    function setAllFilterCheckboxes(isChecked) {
+        const checkboxes = document.querySelectorAll('#filter-options-list .filter-option-cb');
+        checkboxes.forEach(cb => {
+            if (cb.parentElement.style.display !== 'none') {
+                cb.checked = isChecked;
+            }
+        });
+    }
+
+    function showFilterMenu(event, columnIndex) {
+        event.stopPropagation();
+        hideFilterMenu();
+        const db = databases[currentDbName];
+        if (!db) return;
+        
+        const tempFilters = { ...activeFilters };
+        delete tempFilters[columnIndex];
+        const relevantRows = getFilteredRows(tempFilters);
+
+        const uniqueValues = new Set();
+        relevantRows.forEach(row => {
+            if(row[columnIndex] !== '' && row[columnIndex] !== null) uniqueValues.add(row[columnIndex]);
+        });
+        
+        const currentSelection = new Set(activeFilters[columnIndex] || []);
+        let sortedValues = [...uniqueValues];
+
+        if (currentSelection.size > 0) {
+            sortedValues.sort((a, b) => {
+                const aIsSelected = currentSelection.has(a);
+                const bIsSelected = currentSelection.has(b);
+                if (aIsSelected && !bIsSelected) return -1;
+                if (!aIsSelected && bIsSelected) return 1;
+                return String(a).localeCompare(String(b));
+            });
+        } else {
+            sortedValues.sort((a,b) => String(a).localeCompare(String(b)));
+        }
+        
+        let listItemsHtml = '';
+        sortedValues.forEach(value => {
+            const isChecked = currentSelection.size === 0 || currentSelection.has(value);
+            listItemsHtml += `<label><input type="checkbox" class="filter-option-cb" value="${escapeHtml(value)}" ${isChecked ? 'checked' : ''}> ${escapeHtml(value)}</label>`;
+        });
+
+        const menu = document.getElementById('filterMenu');
+        menu.innerHTML = `<div class="filter-popup-header"><span onclick="setAllFilterCheckboxes(true)">(Select All)</span><span onclick="setAllFilterCheckboxes(false)">(Clear All)</span></div><div class="filter-popup-search"><input type="text" id="filter-search-input" onkeyup="filterMenuOptions()" placeholder="Search options..."></div><div class="filter-popup-list" id="filter-options-list">${listItemsHtml}</div><div class="filter-popup-footer"><button onclick="hideFilterMenu()">Cancel</button><button onclick="applyMultiSelectFilter(${columnIndex})" style="background-color:var(--accent); color:white;">Apply</button></div>`;
+        
+        menu.style.display = 'block';
+        menu.style.left = (event.pageX - 5) + 'px';
+        menu.style.top = (event.pageY + 10) + 'px';
+        document.getElementById('filter-search-input').focus();
+    }
+
+    function applyMultiSelectFilter(columnIndex) {
+        const selectedValues = [];
+        document.querySelectorAll('#filter-options-list .filter-option-cb:checked').forEach(cb => {
+            selectedValues.push(cb.value);
+        });
+
+        const allValuesInMenu = [];
+        document.querySelectorAll('#filter-options-list .filter-option-cb').forEach(cb => {
+            allValuesInMenu.push(cb.value);
+        });
+
+        if (selectedValues.length === allValuesInMenu.length || selectedValues.length === 0) {
+            delete activeFilters[columnIndex];
+        } else {
+            activeFilters[columnIndex] = selectedValues;
+        }
+        renderFilteredAndPagedTable(1);
+        hideFilterMenu();
+    }
+    
+    function hideFilterMenu() {
+        document.getElementById('filterMenu').style.display = 'none';
+    }
+    
+    function clearAllFilters() {
+        activeFilters = {};
+        renderFilteredAndPagedTable(1);
+    }
+    
+    function updateFilterIcons() {
+        const db = databases[currentDbName];
+        if (!db || !db.headers) return;
+        db.headers.forEach((header, index) => {
+            const icon = document.getElementById(`filter-icon-${index}`);
+            if (icon) {
+                if (activeFilters[index] && activeFilters[index].length > 0) {
+                    icon.classList.add('active-filter');
+                } else {
+                    icon.classList.remove('active-filter');
+                }
+            }
+        });
+    }
+  
+    function renderFilteredAndPagedTable(page = 1) {
+        const filteredRows = getFilteredRows();
+        const rowsPerPage = 100;
+        
+        const totalPages = Math.max(1, Math.ceil(filteredRows.length / rowsPerPage));
+        page = Math.min(Math.max(1, page), totalPages);
+        
+        const start = (page - 1) * rowsPerPage;
+        const end = start + rowsPerPage;
+        const paginatedRows = filteredRows.slice(start, end);
+
+        const body = document.getElementById('data-table-body');
+        if(body) body.innerHTML = paginatedRows.map(r => `<tr>${r.map(c => `<td>${escapeHtml(String(c||''))}</td>`).join('')}</tr>`).join('');
+        
+        const paginationContainer = document.getElementById('pagination-container');
+        if (paginationContainer) {
+            const paginationHtml = `<div style="flex: 1; text-align: left;">Go to page: <input type="number" min="1" max="${totalPages}" value="${page}" onchange="jumpToPage(this.value)" style="width: 60px;"></div><div style="flex: 1; text-align: center;"><button class="btn" onclick="renderFilteredAndPagedTable(${page - 1})" ${page === 1 ? 'disabled' : ''}>⬅ Prev</button><span style="margin:0 8px">Page ${page} of ${totalPages}</span><button class="btn" onclick="renderFilteredAndPagedTable(${page + 1})" ${page === totalPages ? 'disabled' : ''}>Next ➡</button></div><div style="flex: 1; text-align: right; font-weight: bold;" id="data-count-display">Data Count: ${filteredRows.length}</div>`;
+            paginationContainer.innerHTML = `<div class="pagination">${paginationHtml}</div>`;
+        }
+        updateFilterIcons();
+    }
+
+    function jumpToPage(value) {
+        const pageNum = parseInt(value);
+        if (pageNum && pageNum > 0) {
+            renderFilteredAndPagedTable(pageNum);
+        }
+    }
+
+    async function openDatabase(dbName){
+        currentDbName = dbName;
+        activeFilters = {};
+        let db = databases[dbName];
+        if(!db){ alert('DB not found'); return; }
+        
+        const headerHtml = (db.headers||[]).map((h, i) => `<th><div class="th-content"><span>${escapeHtml(h.name)}</span><span id="filter-icon-${i}" class="filter-icon" onclick="showFilterMenu(event, ${i})">&#9660;</span></div></th>`).join('');
+        const tableHtml = `
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <div style="font-weight:700;">${escapeHtml(dbName)}</div>
+            <div style="display:flex; gap: 10px;">
+                 <button class="btn" onclick="clearAllFilters()">Clear All Filters</button>
+                 <button class="btn" onclick="openDatabases()">⬅️ Back to List</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <div style="overflow:auto; max-height:75vh;">
+              <table id="data-table">
+                <thead><tr>${headerHtml}</tr></thead>
+                <tbody id="data-table-body"></tbody>
+              </table>
+            </div>
+            <div id="pagination-container"></div>
+          </div>
+        `;
+        panelArea.innerHTML = tableHtml;
+        renderFilteredAndPagedTable(1);
+    }
+
+    function showMenu(ev, dbName){
+        ev.stopPropagation();
+        currentPopupDB = dbName;
+        const menu = document.getElementById('popupMenu');
+        menu.innerHTML = `<div style="padding:8px;cursor:pointer" onclick="renameDatabase()">📝 Rename</div><div style="padding:8px;cursor:pointer" onclick="deleteDatabase()">🗑 Delete</div>`;
+        menu.style.display='block';
+        menu.style.left = (ev.clientX - 10) + 'px';
+        menu.style.top  = (ev.clientY + 6) + 'px';
+    }
+    document.addEventListener('click', ()=> {
+        document.getElementById('popupMenu').style.display='none'
+        hideFilterMenu();
+    });
+
+    function renameDatabase(){
+        const newName = prompt('Enter new name for database', currentPopupDB);
+        if(!newName) return;
+        if(databases[newName]){ alert('Name already exists'); return; }
+        databases[newName] = databases[currentPopupDB];
+        delete databases[currentPopupDB];
         localStorage.setItem('databases', JSON.stringify(databases));
         openDatabases();
-      },
-      error(err){ status.textContent = '❌ Failed: ' + (err.message || 'parse error'); }
-    });
-  }
-
-  function importGoogleSheet(){
-    const url = document.getElementById('sheetUrl').value.trim();
-    if(!url){ alert('Paste Google Sheet url'); return; }
-    const name = 'GoogleSheetDB_' + Date.now();
-    databases[name] = { type:'gsheet', url:url, headers:[], rows:[] };
-    localStorage.setItem('databases', JSON.stringify(databases));
-    openDatabases();
-  }
-  
-  // --- Multi-Select Filter Logic ---
-  
-  function getFilteredRows(filtersToApply = activeFilters) {
-    const db = databases[currentDbName];
-    if (!db || !db.rows) return [];
-    
-    let filteredRows = db.rows;
-    const filterKeys = Object.keys(filtersToApply);
-
-    if(filterKeys.length > 0) {
-        filteredRows = filteredRows.filter(row => {
-            return filterKeys.every(colIndex => {
-                const selectedValues = filtersToApply[colIndex];
-                if (!selectedValues || selectedValues.length === 0) return true;
-                return selectedValues.includes(String(row[colIndex]));
-            });
-        });
     }
-    return filteredRows;
-  }
-
-  function filterMenuOptions() {
-    const searchTerm = document.getElementById('filter-search-input').value.toLowerCase();
-    const options = document.querySelectorAll('#filter-options-list label');
-    options.forEach(option => {
-        const text = option.textContent.toLowerCase();
-        option.style.display = text.includes(searchTerm) ? 'flex' : 'none';
-    });
-  }
-  
-  function setAllFilterCheckboxes(isChecked) {
-      const checkboxes = document.querySelectorAll('#filter-options-list .filter-option-cb');
-      checkboxes.forEach(cb => {
-        if (cb.parentElement.style.display !== 'none') {
-            cb.checked = isChecked;
-        }
-      });
-  }
-
-  function showFilterMenu(event, columnIndex) {
-    event.stopPropagation();
-    hideFilterMenu();
-    const db = databases[currentDbName];
-    if (!db) return;
-    
-    const tempFilters = { ...activeFilters };
-    delete tempFilters[columnIndex];
-    const relevantRows = getFilteredRows(tempFilters);
-
-    const uniqueValues = new Set();
-    relevantRows.forEach(row => {
-        if(row[columnIndex] !== '' && row[columnIndex] !== null) uniqueValues.add(row[columnIndex]);
-    });
-    
-    const currentSelection = new Set(activeFilters[columnIndex] || []);
-    let sortedValues = [...uniqueValues];
-
-    if (currentSelection.size > 0) {
-        sortedValues.sort((a, b) => {
-            const aIsSelected = currentSelection.has(a);
-            const bIsSelected = currentSelection.has(b);
-            if (aIsSelected && !bIsSelected) return -1;
-            if (!aIsSelected && bIsSelected) return 1;
-            return String(a).localeCompare(String(b));
-        });
-    } else {
-        sortedValues.sort((a,b) => String(a).localeCompare(String(b)));
-    }
-    
-    let listItemsHtml = '';
-    sortedValues.forEach(value => {
-        const isChecked = currentSelection.size === 0 || currentSelection.has(value);
-        listItemsHtml += `<label><input type="checkbox" class="filter-option-cb" value="${escapeHtml(value)}" ${isChecked ? 'checked' : ''}> ${escapeHtml(value)}</label>`;
-    });
-
-    const menu = document.getElementById('filterMenu');
-    menu.innerHTML = `<div class="filter-popup-header"><span onclick="setAllFilterCheckboxes(true)">(Select All)</span><span onclick="setAllFilterCheckboxes(false)">(Clear All)</span></div><div class="filter-popup-search"><input type="text" id="filter-search-input" onkeyup="filterMenuOptions()" placeholder="Search options..."></div><div class="filter-popup-list" id="filter-options-list">${listItemsHtml}</div><div class="filter-popup-footer"><button onclick="hideFilterMenu()">Cancel</button><button onclick="applyMultiSelectFilter(${columnIndex})" style="background-color:var(--accent); color:white;">Apply</button></div>`;
-    
-    menu.style.display = 'block';
-    menu.style.left = (event.pageX - 5) + 'px';
-    menu.style.top = (event.pageY + 10) + 'px';
-    document.getElementById('filter-search-input').focus();
-  }
-
-  function applyMultiSelectFilter(columnIndex) {
-    const selectedValues = [];
-    document.querySelectorAll('#filter-options-list .filter-option-cb:checked').forEach(cb => {
-        selectedValues.push(cb.value);
-    });
-
-    const allValuesInMenu = [];
-    document.querySelectorAll('#filter-options-list .filter-option-cb').forEach(cb => {
-        allValuesInMenu.push(cb.value);
-    });
-
-    if (selectedValues.length === allValuesInMenu.length || selectedValues.length === 0) {
-        delete activeFilters[columnIndex];
-    } else {
-        activeFilters[columnIndex] = selectedValues;
-    }
-    renderFilteredAndPagedTable(1);
-    hideFilterMenu();
-  }
-  
-  function hideFilterMenu() {
-    document.getElementById('filterMenu').style.display = 'none';
-  }
-  
-  function clearAllFilters() {
-    activeFilters = {};
-    renderFilteredAndPagedTable(1);
-  }
-  
-  function updateFilterIcons() {
-      const db = databases[currentDbName];
-      if (!db || !db.headers) return;
-      db.headers.forEach((header, index) => {
-          const icon = document.getElementById(`filter-icon-${index}`);
-          if (icon) {
-              if (activeFilters[index] && activeFilters[index].length > 0) {
-                  icon.classList.add('active-filter');
-              } else {
-                  icon.classList.remove('active-filter');
-              }
-          }
-      });
-  }
-  
-  function renderFilteredAndPagedTable(page = 1) {
-    const filteredRows = getFilteredRows();
-    const rowsPerPage = 100;
-    
-    const totalPages = Math.max(1, Math.ceil(filteredRows.length / rowsPerPage));
-    page = Math.min(Math.max(1, page), totalPages);
-    
-    const start = (page - 1) * rowsPerPage;
-    const end = start + rowsPerPage;
-    const paginatedRows = filteredRows.slice(start, end);
-
-    const body = document.getElementById('data-table-body');
-    if(body) body.innerHTML = paginatedRows.map(r => `<tr>${r.map(c => `<td>${escapeHtml(String(c||''))}</td>`).join('')}</tr>`).join('');
-    
-    const paginationContainer = document.getElementById('pagination-container');
-    if (paginationContainer) {
-        const paginationHtml = `<div style="flex: 1; text-align: left;">Go to page: <input type="number" min="1" max="${totalPages}" value="${page}" onchange="jumpToPage(this.value)" style="width: 60px;"></div><div style="flex: 1; text-align: center;"><button class="btn" onclick="renderFilteredAndPagedTable(${page - 1})" ${page === 1 ? 'disabled' : ''}>⬅ Prev</button><span style="margin:0 8px">Page ${page} of ${totalPages}</span><button class="btn" onclick="renderFilteredAndPagedTable(${page + 1})" ${page === totalPages ? 'disabled' : ''}>Next ➡</button></div><div style="flex: 1; text-align: right; font-weight: bold;" id="data-count-display">Data Count: ${filteredRows.length}</div>`;
-        paginationContainer.innerHTML = `<div class="pagination">${paginationHtml}</div>`;
+    function deleteDatabase(){
+        if(!confirm('Delete database "'+currentPopupDB+'" ?')) return;
+        delete databases[currentPopupDB];
+        localStorage.setItem('databases', JSON.stringify(databases));
+        openDatabases();
     }
 
-    updateFilterIcons();
-  }
+    function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+    function escapeJs(s){ return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'\\"'); }
 
-  function jumpToPage(value) {
-    const pageNum = parseInt(value);
-    if (pageNum && pageNum > 0) {
-        renderFilteredAndPagedTable(pageNum);
-    }
-  }
-
-  async function fetchAndSaveGSheet(dbName) {
-    const db = databases[dbName];
-    if (!db || !db.url) return;
-    
-    let csvUrl = db.url;
-    if(db.url.includes('/edit')) csvUrl = db.url.replace('/edit','/gviz/tq?tqx=out:csv');
-    else if(db.url.includes('/pub')) csvUrl = db.url.replace('/pub','/pub?output=csv');
-    
-    const cacheBuster = '&_=' + new Date().getTime();
-    const finalUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(csvUrl) + cacheBuster;
-
-    const r = await fetch(finalUrl);
-    if (!r.ok) throw new Error('Network response was not ok');
-    const txt = await r.text();
-    const parsed = Papa.parse(txt, { header:true, skipEmptyLines:true });
-    
-    // Check if the fetched data is an HTML error page
-    if (parsed.meta.fields && parsed.meta.fields.length > 0 && parsed.meta.fields[0].toLowerCase().includes('<!doctype html')) {
-        throw new Error('Received HTML instead of CSV. Check GSheet permissions.');
-    }
-    
-    const newDbData = {
-        ...db,
-        headers: (parsed.meta.fields || []).map(f=>({name:f})),
-        rows: (parsed.data || []).map(row => (parsed.meta.fields || []).map(h => row[h] || ''))
-    };
-    databases[dbName] = newDbData;
-    localStorage.setItem('databases', JSON.stringify(databases));
-  }
-
-  async function openDatabase(dbName){
-    currentDbName = dbName;
-    activeFilters = {};
-    let db = databases[dbName];
-    if(!db){ alert('DB not found'); return; }
-
-    panelArea.innerHTML = `<h2>Loading data, please wait...</h2>`;
-
-    if (db.type === 'gsheet' && db.url) {
-        try {
-            await fetchAndSaveGSheet(dbName);
-        } catch(e) {
-            console.warn('gsheet fetch failed', e);
-            panelArea.innerHTML = `<h2>Error loading data from Google Sheet.</h2><p>Please check the share permissions and your internet connection.</p><button class="btn" onclick="openDatabases()">Back to List</button>`;
-            return;
-        }
-    }
-
-    db = databases[dbName];
-    
-    const headerHtml = (db.headers||[]).map((h, i) => `<th><div class="th-content"><span>${escapeHtml(h.name)}</span><span id="filter-icon-${i}" class="filter-icon" onclick="showFilterMenu(event, ${i})">&#9660;</span></div></th>`).join('');
-    const tableHtml = `
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-        <div style="font-weight:700;">${escapeHtml(dbName)}</div>
-        <div style="display:flex; gap: 10px;">
-             <button class="btn" id="manual-refresh-btn" onclick="manualRefresh()">Manual Refresh</button>
-             <button class="btn" onclick="scheduleRefresh()">Schedule Refresh</button>
-             <button class="btn" onclick="clearAllFilters()">Clear All Filters</button>
-             <button class="btn" onclick="openDatabases()">⬅️ Back to List</button>
-        </div>
-      </div>
-      <div class="table-wrap">
-        <div style="overflow:auto; max-height:75vh;">
-          <table id="data-table">
-            <thead><tr>${headerHtml}</tr></thead>
-            <tbody id="data-table-body"></tbody>
-          </table>
-        </div>
-        <div id="pagination-container"></div>
-      </div>
-    `;
-    panelArea.innerHTML = tableHtml;
-    renderFilteredAndPagedTable(1);
-  }
-
-  async function manualRefresh() {
-      if (currentDbName) {
-          const btn = document.getElementById('manual-refresh-btn');
-          if(btn) btn.classList.add('loading');
-          
-          try {
-            await fetchAndSaveGSheet(currentDbName);
-            renderFilteredAndPagedTable(1); // Re-render the table with new data
-            showSuccessPopup('Data has been refreshed successfully!');
-          } catch (e) {
-            // Error is already handled inside openDatabase, but we can add a specific message here if needed.
-             panelArea.innerHTML = `<h2>Error refreshing data from Google Sheet.</h2><p>Please check the share permissions and your internet connection.</p><button class="btn" onclick="openDatabases()">Back to List</button>`;
-          } finally {
-            if(btn) btn.classList.remove('loading');
-          }
-      }
-  }
-
-  function scheduleRefresh() {
-      alert("This feature requires a backend server to run scheduled tasks even when the browser is closed. This is a planned future enhancement.");
-  }
-
-  function showSuccessPopup(message) {
-      document.getElementById('successPopupMessage').textContent = message;
-      document.getElementById('successPopup').style.display = 'flex';
-  }
-
-  function showMenu(ev, dbName){
-    ev.stopPropagation();
-    currentPopupDB = dbName;
-    const menu = document.getElementById('popupMenu');
-    menu.innerHTML = `<div style="padding:8px;cursor:pointer" onclick="renameDatabase()">📝 Rename</div><div style="padding:8px;cursor:pointer" onclick="deleteDatabase()">🗑 Delete</div>`;
-    menu.style.display='block';
-    menu.style.left = (ev.clientX - 10) + 'px';
-    menu.style.top  = (ev.clientY + 6) + 'px';
-  }
-  document.addEventListener('click', ()=> {
-    document.getElementById('popupMenu').style.display='none'
-    hideFilterMenu();
-  });
-
-  function renameDatabase(){
-    const newName = prompt('Enter new name for database', currentPopupDB);
-    if(!newName) return;
-    if(databases[newName]){ alert('Name already exists'); return; }
-    databases[newName] = databases[currentPopupDB];
-    delete databases[currentPopupDB];
-    localStorage.setItem('databases', JSON.stringify(databases));
-    openDatabases();
-  }
-  function deleteDatabase(){
-    if(!confirm('Delete database "'+currentPopupDB+'" ?')) return;
-    delete databases[currentPopupDB];
-    localStorage.setItem('databases', JSON.stringify(databases));
-    openDatabases();
-  }
-
-  function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-  function escapeJs(s){ return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'\\"'); }
-
-  goHome();
+    // Make functions globally accessible for inline onclicks
+    window.goHome = goHome;
+    window.openDatabases = openDatabases;
+    window.openForms = openForms;
+    window.clearSearch = clearSearch;
+    window.showImportForm = showImportForm;
+    window.importCSV = importCSV;
+    window.openDatabase = openDatabase;
+    window.showMenu = showMenu;
+    window.renameDatabase = renameDatabase;
+    window.deleteDatabase = deleteDatabase;
+    window.jumpToPage = jumpToPage;
+    window.renderFilteredAndPagedTable = renderFilteredAndPagedTable;
+    window.clearAllFilters = clearAllFilters;
+    window.showFilterMenu = showFilterMenu;
+    window.setAllFilterCheckboxes = setAllFilterCheckboxes;
+    window.filterMenuOptions = filterMenuOptions;
+    window.hideFilterMenu = hideFilterMenu;
+    window.applyMultiSelectFilter = applyMultiSelectFilter;
 </script>
 </body>
 </html>

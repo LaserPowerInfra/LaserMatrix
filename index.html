@@ -512,17 +512,17 @@
     document.getElementById('data-table-body').innerHTML = bodyHtml;
     
     const paginationHtml = `
-      <div>
-        Go to page: <input type="number" min="1" max="${totalPages}" value="${page}" onchange="jumpToPage(this.value)" style="width: 50px;">
-      </div>
-      <div>
-        <button class="btn" onclick="renderFilteredAndPagedTable(${page - 1})" ${page === 1 ? 'disabled' : ''}>⬅ Prev</button>
-        <span style="margin:0 8px">Page ${page} of ${totalPages}</span>
-        <button class="btn" onclick="renderFilteredAndPagedTable(${page + 1})" ${page === totalPages ? 'disabled' : ''}>Next ➡</button>
-      </div>
-      <div style="font-weight: bold;" id="data-count-display">
-        Data Count: ${filteredRows.length}
-      </div>
+        <div style="flex: 1; text-align: left;">
+            Go to page: <input type="number" min="1" max="${totalPages}" value="${page}" onchange="jumpToPage(this.value)" style="width: 60px;">
+        </div>
+        <div style="flex: 2; text-align: center;">
+            <button class="btn" onclick="renderFilteredAndPagedTable(${page - 1})" ${page === 1 ? 'disabled' : ''}>⬅ Prev</button>
+            <span style="margin:0 8px">Page ${page} of ${totalPages}</span>
+            <button class="btn" onclick="renderFilteredAndPagedTable(${page + 1})" ${page === totalPages ? 'disabled' : ''}>Next ➡</button>
+        </div>
+        <div style="flex: 1; text-align: right; font-weight: bold;" id="data-count-display">
+            Data Count: ${filteredRows.length}
+        </div>
     `;
     document.getElementById('pagination-container').innerHTML = `<div class="pagination">${paginationHtml}</div>`;
 
@@ -542,15 +542,33 @@
     const db = databases[dbName];
     if(!db){ alert('DB not found'); return; }
 
-    if(db.type === 'gsheet' && db.url){ /* ... gsheet fetch logic ... */ }
+    // GOOGLE SHEET FETCH LOGIC WAS MISSING, RE-ADDED
+    if(db.type === 'gsheet' && db.url){
+      let csvUrl = db.url;
+      if(db.url.includes('/edit')) csvUrl = db.url.replace('/edit','/gviz/tq?tqx=out:csv');
+      else if(db.url.includes('output=csv')) csvUrl = db.url;
+      else if(db.url.includes('/pub')) csvUrl = db.url.includes('output=csv') ? db.url : db.url.replace('/pub','/pub?output=csv');
+      try{
+        const r = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(csvUrl));
+        const txt = await r.text();
+        const parsed = Papa.parse(txt, { header:true, skipEmptyLines:true });
+        db.headers = parsed.meta.fields.map(f=>({name:f}));
+        db.rows = parsed.data.map(row => db.headers.map(h => row[h.name] || ''));
+        databases[dbName] = db;
+        localStorage.setItem('databases', JSON.stringify(databases));
+      }catch(e){
+        console.warn('gsheet fetch failed', e);
+        alert('Failed to fetch data from Google Sheet. Please check the URL and sharing permissions.');
+      }
+    }
 
     const headerHtml = (db.headers||[]).map((h, i) => `<th><div class="th-content"><span>${escapeHtml(h.name)}</span><span id="filter-icon-${i}" class="filter-icon" onclick="showFilterMenu(event, ${i})">&#9660;</span></div></th>`).join('');
 
     const tableHtml = `
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
         <div style="display:flex; align-items:center; gap: 20px;">
-            <div style="font-weight:700;">${escapeHtml(dbName)}</div>
-            </div>
+             <div style="font-weight:700;">${escapeHtml(dbName)}</div>
+             </div>
         <div style="display:flex; gap: 10px;">
              <button class="btn" onclick="clearAllFilters()">Clear All Filters</button>
              <button class="btn" onclick="openDatabases()">⬅️ Back to List</button>

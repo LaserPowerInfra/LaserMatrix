@@ -511,6 +511,11 @@
     const txt = await r.text();
     const parsed = Papa.parse(txt, { header:true, skipEmptyLines:true });
     
+    // Check if the fetched data is an HTML error page
+    if (parsed.meta.fields && parsed.meta.fields.length > 0 && parsed.meta.fields[0].toLowerCase().includes('<!doctype html')) {
+        throw new Error('Received HTML instead of CSV. Check GSheet permissions.');
+    }
+    
     const newDbData = {
         ...db,
         headers: (parsed.meta.fields || []).map(f=>({name:f})),
@@ -572,10 +577,11 @@
           
           try {
             await fetchAndSaveGSheet(currentDbName);
-            renderFilteredAndPagedTable(1);
+            renderFilteredAndPagedTable(1); // Re-render the table with new data
             showSuccessPopup('Data has been refreshed successfully!');
           } catch (e) {
-            alert('Failed to refresh data.');
+            // Error is already handled inside openDatabase, but we can add a specific message here if needed.
+             panelArea.innerHTML = `<h2>Error refreshing data from Google Sheet.</h2><p>Please check the share permissions and your internet connection.</p><button class="btn" onclick="openDatabases()">Back to List</button>`;
           } finally {
             if(btn) btn.classList.remove('loading');
           }

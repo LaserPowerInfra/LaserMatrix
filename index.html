@@ -212,7 +212,7 @@
       <section id="panelArea" class="panel" aria-live="polite" style="display:none;"></section>
     </main>
 
-    <div id="popupMenu" class="filter-popup" style="min-width:140px; width:auto;"></div>
+    <div id="popupMenu" style="position:absolute;display:none;background:#fff;border:1px solid #ddd;border-radius:6px;box-shadow:0 6px 20px rgba(0,0,0,0.12);min-width:140px;z-index:30"></div>
   </div>
 
 <script type="module">
@@ -221,28 +221,15 @@
     import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import { getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-     {
-
-    apiKey: "AIzaSyCmKA2ckvZ43rc30--fjgfn7klrMufghR0",
-
-    authDomain: "laser-matrix.firebaseapp.com",
-
-    projectId: "laser-matrix",
-
-    storageBucket: "laser-matrix.firebasestorage.app",
-
-    messagingSenderId: "246061144480",
-
-    appId: "1:246061144480:web:7905774954b025114e6cc5",
-
-    measurementId: "G-WKY8C6KRZK"
-
-  }
+    // Your Firebase Configuration
     const firebaseConfig = {
-      // apiKey: "...",
-      // authDomain: "...",
-      // projectId: "...",
-      // etc.
+        apiKey: "AIzaSyCmKA2ckvZ43rc30--fjgfn7klrMufghR0",
+        authDomain: "laser-matrix.firebaseapp.com",
+        projectId: "laser-matrix",
+        storageBucket: "laser-matrix.firebasestorage.app",
+        messagingSenderId: "246061144480",
+        appId: "1:246061144480:web:7905774954b025114e6cc5",
+        measurementId: "G-WKY8C6KRZK"
     };
 
     // --- DO NOT EDIT BELOW THIS LINE ---
@@ -253,6 +240,7 @@
     const db = getFirestore(app);
     const provider = new GoogleAuthProvider();
 
+    // --- DOM Elements ---
     const loginContainer = document.getElementById('login-container');
     const appContainer = document.getElementById('app-container');
     const loginBtn = document.getElementById('login-btn');
@@ -261,10 +249,12 @@
     const hero = document.getElementById('hero');
     const panelArea = document.getElementById('panelArea');
 
-    let localDatabases = {}; // In-memory cache
+    // --- Global State ---
+    let localDatabasesCache = {}; 
     let currentDbName = null;
     let currentPopupDB = null;
 
+    // --- Authentication Logic ---
     loginBtn.addEventListener('click', () => {
         signInWithPopup(auth, provider).catch(error => {
             console.error("Authentication Error: ", error);
@@ -291,6 +281,8 @@
         }
     });
     
+    // --- Application Logic ---
+    
     function renderHeroOverlay(){
         return `<div class="overlay-top" aria-hidden="true"><div class="sub-title">WELCOME TO</div><div class="three-d" data-text="LASER MATRIX">LASER MATRIX</div></div>`;
     }
@@ -309,7 +301,8 @@
     }
 
     async function renderDbList(searchTerm = ''){
-        const querySnapshot = await getDocs(collection(db, "databases"));
+        const dbCollection = collection(db, "databases");
+        const querySnapshot = await getDocs(dbCollection);
         let dbNames = [];
         querySnapshot.forEach((doc) => {
             dbNames.push(doc.id);
@@ -362,8 +355,8 @@
                 const rows = (res.data || []).map(r => (res.meta.fields || []).map(f => r[f] || ''));
                 
                 const dbData = {
-                    headers: headers,
-                    rows: rows,
+                    headers: headers.length > 0 ? headers : [],
+                    rows: rows.length > 0 ? rows: [],
                     createdAt: new Date().toISOString()
                 };
 
@@ -382,21 +375,21 @@
     }
     
     async function openDatabase(dbName){
-        panelArea.innerHTML = `<h2>Loading data, please wait...</h2>`;
+        panelArea.innerHTML = `<h2>Loading data from Firestore...</h2>`;
         currentDbName = dbName;
         
         const docRef = doc(db, "databases", dbName);
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
-            localDatabases[dbName] = docSnap.data();
+            localDatabasesCache[dbName] = docSnap.data();
         } else {
             alert("Error: Database not found in Firestore.");
             openDatabases();
             return;
         }
 
-        const currentDB = localDatabases[dbName];
+        const currentDB = localDatabasesCache[dbName];
         
         const headerHtml = (currentDB.headers||[]).map((h, i) => `<th><div class="th-content"><span>${escapeHtml(h.name)}</span></div></th>`).join('');
         const tableHtml = `
@@ -421,7 +414,7 @@
     }
     
     function getFilteredRows() {
-        const dbData = localDatabases[currentDbName];
+        const dbData = localDatabasesCache[currentDbName];
         if (!dbData || !dbData.rows) return [];
         return dbData.rows;
     }

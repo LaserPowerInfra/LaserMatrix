@@ -123,18 +123,15 @@
     .table-wrap{background:#fff;padding:12px;border-radius:8px;border:1px solid #e6ebee}
     table{width:100%;border-collapse:collapse}
     th,td{border:1px solid #e6ebee;padding:8px;text-align:left;font-size:13px; vertical-align: top;}
-    
-    /* CSS CHANGE HERE TO PREVENT SHAKING */
     thead {
         position: sticky;
         top: -1px;
         z-index: 10;
-        transform: translateZ(0); /* Promotes the element to a new layer for smoother scrolling */
+        transform: translateZ(0);
     }
     th{
         background:#f4f6f8;
     }
-
     .pagination{
         margin-top:12px;
         display: flex;
@@ -523,17 +520,17 @@
     document.getElementById('data-table-body').innerHTML = bodyHtml;
     
     const paginationHtml = `
-      <div style="flex: 1 1 0%; text-align: left;">
-        Go to page: <input type="number" min="1" max="${totalPages}" value="${page}" onchange="jumpToPage(this.value)" style="width: 60px;">
-      </div>
-      <div style="flex: 1 1 0%; text-align: center;">
-        <button class="btn" onclick="renderFilteredAndPagedTable(${page - 1})" ${page === 1 ? 'disabled' : ''}>⬅ Prev</button>
-        <span style="margin:0 8px">Page ${page} of ${totalPages}</span>
-        <button class="btn" onclick="renderFilteredAndPagedTable(${page + 1})" ${page === totalPages ? 'disabled' : ''}>Next ➡</button>
-      </div>
-      <div style="flex: 1 1 0%; text-align: right; font-weight: bold;" id="data-count-display">
-        Data Count: ${filteredRows.length}
-      </div>
+        <div style="flex: 1; text-align: left;">
+            Go to page: <input type="number" min="1" max="${totalPages}" value="${page}" onchange="jumpToPage(this.value)" style="width: 60px;">
+        </div>
+        <div style="flex: 1; text-align: center;">
+            <button class="btn" onclick="renderFilteredAndPagedTable(${page - 1})" ${page === 1 ? 'disabled' : ''}>⬅ Prev</button>
+            <span style="margin:0 8px">Page ${page} of ${totalPages}</span>
+            <button class="btn" onclick="renderFilteredAndPagedTable(${page + 1})" ${page === totalPages ? 'disabled' : ''}>Next ➡</button>
+        </div>
+        <div style="flex: 1; text-align: right; font-weight: bold;" id="data-count-display">
+            Data Count: ${filteredRows.length}
+        </div>
     `;
     document.getElementById('pagination-container').innerHTML = `<div class="pagination">${paginationHtml}</div>`;
 

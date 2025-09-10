@@ -123,14 +123,18 @@
     .table-wrap{background:#fff;padding:12px;border-radius:8px;border:1px solid #e6ebee}
     table{width:100%;border-collapse:collapse}
     th,td{border:1px solid #e6ebee;padding:8px;text-align:left;font-size:13px; vertical-align: top;}
+    
+    /* CSS CHANGE HERE TO PREVENT SHAKING */
     thead {
         position: sticky;
-        top: -1px; /* -1px to hide the top border of cells below */
+        top: -1px;
         z-index: 10;
+        transform: translateZ(0); /* Promotes the element to a new layer for smoother scrolling */
     }
     th{
         background:#f4f6f8;
     }
+
     .pagination{
         margin-top:12px;
         display: flex;
